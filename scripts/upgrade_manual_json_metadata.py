@@ -140,7 +140,7 @@ def _upgrade_one(
     before_core = _core_snapshot(data)
 
     if _already_has_expected_metadata(data, sample_id=sample_id, domain=domain, img_ref=img_ref, gt_rel=gt_rel):
-        row["status"] = "SKIP_ALREADY_UPGRADED"
+        row["status"] = "ALREADY_OK"
         row["reason"] = "already_manual_input_v2"
         return row
 

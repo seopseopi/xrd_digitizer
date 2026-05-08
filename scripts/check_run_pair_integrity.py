@@ -74,8 +74,9 @@ def _resolve_run_dirs(run_dir: Optional[Path], root: Optional[Path]) -> List[Pat
 
 def _lookup_manifest_paths(run_variant_dir: Path, sample_id: Optional[str], domain: Optional[str]) -> Dict[str, Optional[str]]:
     if not sample_id or not domain:
-        return {"input_image": None, "manual_json": None, "gt_json": None}
+        return {"input_image": None, "manual_json": None, "gt_json": None, "fallback_source": None}
     candidates = [
+        ROOT / "outputs" / "_candidate_patch_full" / "manual_metadata_upgrade_probe_samples.csv",
         ROOT / "outputs" / "_roi_upscale_diag" / "diag_manifest.csv",
         ROOT / "outputs" / "_candidate_patch_full" / "full_manifest_validated.csv",
         ROOT / "outputs" / "_candidate_patch_panel" / "panel_manifest_validated.csv",
@@ -95,11 +96,20 @@ def _lookup_manifest_paths(run_variant_dir: Path, sample_id: Optional[str], doma
             continue
         row = sel.iloc[0]
         return {
-            "input_image": str(row.get("input_image")) if "input_image" in row.index else None,
+            "input_image": (
+                str(row.get("input_image"))
+                if "input_image" in row.index
+                else (str(row.get("expected_input_image")) if "expected_input_image" in row.index else None)
+            ),
             "manual_json": str(row.get("manual_json")) if "manual_json" in row.index else None,
-            "gt_json": str(row.get("gt_json")) if "gt_json" in row.index else None,
+            "gt_json": (
+                str(row.get("gt_json"))
+                if "gt_json" in row.index
+                else (str(row.get("expected_gt_json")) if "expected_gt_json" in row.index else None)
+            ),
+            "fallback_source": str(csv_path),
         }
-    return {"input_image": None, "manual_json": None, "gt_json": None}
+    return {"input_image": None, "manual_json": None, "gt_json": None, "fallback_source": None}
 
 
 def _plot_box_warning(plot_box: List[int], w: int, h: int) -> Optional[str]:
@@ -133,6 +143,8 @@ def _check_one(run_variant_dir: Path) -> Dict[str, Any]:
     input_image = meta.get("input_image")
     manual_json = meta.get("manual_json")
     gt_json = meta.get("gt_json")
+    fallback_used = False
+    fallback_source = None
 
     run_key = run_variant_dir.parent.name  # clean_pattern_xxx
     run_domain = run_key.split("_pattern_")[0] if "_pattern_" in run_key else None
@@ -141,9 +153,13 @@ def _check_one(run_variant_dir: Path) -> Dict[str, Any]:
         run_sample_id = _sid_from_text(result_candidates[0].name)
     if not input_image or not manual_json or not gt_json:
         from_manifest = _lookup_manifest_paths(run_variant_dir, run_sample_id, run_domain)
+        before = (input_image, manual_json, gt_json)
         input_image = input_image or from_manifest.get("input_image")
         manual_json = manual_json or from_manifest.get("manual_json")
         gt_json = gt_json or from_manifest.get("gt_json")
+        after = (input_image, manual_json, gt_json)
+        fallback_used = before != after
+        fallback_source = from_manifest.get("fallback_source") if fallback_used else None
 
     image_w = dbg.get("image_size", [None, None])[0] if isinstance(dbg.get("image_size"), list) else None
     image_h = dbg.get("image_size", [None, None])[1] if isinstance(dbg.get("image_size"), list) else None
@@ -247,6 +263,8 @@ def _check_one(run_variant_dir: Path) -> Dict[str, Any]:
         "input_image": input_image,
         "manual_json": manual_json,
         "gt_json": gt_json,
+        "fallback_used": fallback_used,
+        "fallback_source": fallback_source,
         "plot_box": plot_box,
         "roi_box": roi_box,
         "image_width": image_w,

@@ -72,6 +72,10 @@ class RunResult:
     model_assist: Optional[Dict[str, Any]] = None
     # 해상도/업스케일 진단용 (평가 지표와 분리; 없으면 미포함)
     resolution_diagnostics: Optional[Dict[str, Any]] = None
+    # 평가/고해상도 export를 명시적으로 분리한 정식 출력 필드.
+    export_points_eval: Optional[Dict[str, Any]] = None
+    export_points_highres: Optional[Dict[str, Any]] = None
+    export_metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict:
         out: Dict[str, Any] = {
@@ -89,6 +93,12 @@ class RunResult:
             out["model_assist"] = self.model_assist
         if self.resolution_diagnostics is not None:
             out["resolution_diagnostics"] = self.resolution_diagnostics
+        if self.export_points_eval is not None:
+            out["export_points_eval"] = self.export_points_eval
+        if self.export_points_highres is not None:
+            out["export_points_highres"] = self.export_points_highres
+        if self.export_metadata is not None:
+            out["export_metadata"] = self.export_metadata
         return out
 
 

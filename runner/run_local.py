@@ -11,6 +11,7 @@ Step 11 전처리: ROI crop -> perspective -> color model -> masks -> morphology
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from dataclasses import replace
@@ -303,6 +304,7 @@ def run_pipeline(
     oracle_confidence_sharpening: float = 1.0,
     roi_upscale_factor: int = 1,
     roi_upscale_method: str = "lanczos",
+    final_export_mode: str = "eval_grid",
 ) -> tuple[RunResult, Dict]:
     """Step 11 전처리 + 추적·캘리브레이션 (운영 v1.1 = calibrate_v1_1).
 
@@ -1025,6 +1027,9 @@ def run_pipeline(
     tt_eval = numeric["two_theta_values"]
     ii_eval = numeric["intensities"]
     export_rs = getattr(mi, "export_resample_points", None)
+    export_mode = str(final_export_mode).strip().lower()
+    if export_mode not in {"eval_grid", "highres"}:
+        raise ValueError(f"unsupported final_export_mode: {final_export_mode}")
 
     audit_resolution = {
         "input_image_width": int(w),
@@ -1059,6 +1064,16 @@ def run_pipeline(
         "audit": audit_resolution,
         "export_points_eval_note": "same_as_root_fields_two_theta_values_and_intensities",
     }
+    export_points_eval = {
+        "two_theta_values": tt_eval,
+        "intensities": ii_eval,
+        "point_count": int(len(tt_eval)),
+        "source": "original_roi_eval_grid",
+        "upscale_factor": float(roi_up_factor),
+        "downscaled_from_highres": bool(roi_up_factor > 1),
+        "valid_point_count": int(np.sum(valid_mask_numeric)),
+        "gap_count": int(len(valid_mask_numeric) - np.sum(valid_mask_numeric)),
+    }
     if roi_up_factor > 1:
         tt_hi, ii_hi = convert_trace_upscaled_roi_to_numeric(
             trace_columns_internal,
@@ -1089,8 +1104,43 @@ def run_pipeline(
             ),
         }
     else:
+        tt_hi, ii_hi = tt_eval, ii_eval
         audit_resolution["highres_export_point_count_diag"] = int(len(tt_eval))
         audit_resolution["note_highres_diag_merged_with_eval"] = True
+
+    valid_internal_list = [bool(v) for v in valid_internal]
+    export_points_highres = {
+        "two_theta_values": tt_hi,
+        "intensities": ii_hi,
+        "point_count": int(len(tt_hi)),
+        "source": "roi_upscale_trace" if roi_up_factor > 1 else "original_roi_eval_grid",
+        "upscale_factor": float(roi_up_factor),
+        "downscaled_to_eval_grid": False,
+        "trace_column_count": int(len(trace_columns_internal)),
+        "valid_point_count": int(np.sum(valid_internal)),
+        "gap_count": int(len(valid_internal) - np.sum(valid_internal)),
+        "valid": valid_internal_list,
+    }
+    final_tt = tt_hi if export_mode == "highres" else tt_eval
+    final_ii = ii_hi if export_mode == "highres" else ii_eval
+    export_metadata = {
+        "upscale_factor": float(roi_up_factor),
+        "roi_width_original": int(roi_w_orig),
+        "roi_height_original": int(roi_h_orig),
+        "roi_width_after_upscale": int(roi_w),
+        "roi_height_after_upscale": int(roi_h),
+        "candidate_column_count": int(cand_stats.get("total_columns") or 0),
+        "raw_trace_point_count": int(len(trace_columns_internal)),
+        "raw_trace_valid_point_count": int(raw_trace_valid_point_count_internal),
+        "eval_export_point_count": int(len(tt_eval)),
+        "highres_export_point_count": int(len(tt_hi)),
+        "final_export_mode": export_mode,
+        "final_export_point_count": int(len(final_tt)),
+        "highres_available": bool(len(tt_hi) > 0),
+    }
+    audit_resolution["final_export_mode"] = export_mode
+    audit_resolution["final_export_point_count"] = int(len(final_tt))
+    audit_resolution["highres_export_point_count"] = int(len(tt_hi))
 
     # --- Step 17+ stubs ---
     for stage in PIPELINE_STAGES:
@@ -1099,8 +1149,8 @@ def run_pipeline(
         warnings.append("pipeline: numeric conversion complete, evaluation pending")
 
     result = RunResult(
-        two_theta_values=numeric["two_theta_values"],
-        intensities=numeric["intensities"],
+        two_theta_values=final_tt,
+        intensities=final_ii,
         x_range=numeric["x_range"],
         y_range=numeric["y_range"],
         quality={"pixel_residual_mean": rt_err, "peak_match_score": None},
@@ -1109,6 +1159,9 @@ def run_pipeline(
         peaks_numeric_curve=numeric.get("peaks_numeric_curve", []),
         model_assist=model_assist_meta,
         resolution_diagnostics=resolution_diag_payload,
+        export_points_eval=export_points_eval,
+        export_points_highres=export_points_highres,
+        export_metadata=export_metadata,
         used_manual_inputs={
             "plot_box": mi.plot_box,
             "x_axis_points": mi.x_axis_points,
@@ -1498,6 +1551,7 @@ def run_single(
     oracle_confidence_sharpening: float = 1.0,
     roi_upscale_factor: int = 1,
     roi_upscale_method: str = "lanczos",
+    final_export_mode: str = "eval_grid",
     gt_json_path_for_metadata: Optional[str] = None,
 ) -> RunResult:
     """단일 이미지 처리 진입점.
@@ -1507,6 +1561,11 @@ def run_single(
     """
     image = load_image(image_path)
     mi = load_manual_inputs(manual_inputs_path)
+    manual_meta: Dict[str, Any] = {}
+    try:
+        manual_meta = json.loads(Path(manual_inputs_path).read_text(encoding="utf-8"))
+    except Exception:
+        manual_meta = {}
 
     errors = validate_manual_inputs(mi, image.size)
     if errors:
@@ -1587,15 +1646,33 @@ def run_single(
             oracle_confidence_sharpening=oracle_confidence_sharpening,
             roi_upscale_factor=int(roi_upscale_factor),
             roi_upscale_method=str(roi_upscale_method),
+            final_export_mode=str(final_export_mode),
+        )
+
+    metadata_gt_json = (
+        str(gt_json_path_for_metadata)
+        if gt_json_path_for_metadata
+        else str(manual_meta.get("gt_json", "") or "")
+    )
+    if isinstance(getattr(result, "export_metadata", None), dict):
+        result.export_metadata.update(
+            {
+                "sample_id": str(manual_meta.get("sample_id", "") or Path(output_json_path).stem.replace("_result", "")),
+                "domain": str(manual_meta.get("domain", "") or ""),
+                "input_image": str(image_path),
+                "manual_json": str(manual_inputs_path),
+                "gt_json": metadata_gt_json,
+            }
         )
 
     if isinstance(debug_data.get("debug.json"), dict):
         debug_data["debug.json"]["run_metadata"] = {
             "input_image": str(image_path),
             "manual_json": str(manual_inputs_path),
-            "gt_json": str(gt_json_path_for_metadata) if gt_json_path_for_metadata else None,
+            "gt_json": metadata_gt_json or None,
             "output_json_path": str(output_json_path),
             "debug_dir": str(debug_dir),
+            "final_export_mode": str(final_export_mode),
         }
     save_result_json(result, output_json_path)
     save_debug_files(debug_data, debug_dir)
@@ -1678,6 +1755,13 @@ def main() -> None:
         default="lanczos",
         choices=["lanczos", "bicubic"],
         help="ROI upscale interpolation method (AI super-resolution 아님)",
+    )
+    parser.add_argument(
+        "--final-export-mode",
+        type=str,
+        default="eval_grid",
+        choices=["eval_grid", "highres"],
+        help="final JSON root curve export mode: eval_grid keeps original ROI-width grid, highres uses ROI-upscaled trace points",
     )
     parser.add_argument(
         "--use-ridge-candidates",
@@ -2262,6 +2346,7 @@ def main() -> None:
         oracle_confidence_sharpening=float(args.oracle_confidence_sharpening),
         roi_upscale_factor=int(args.roi_upscale_factor),
         roi_upscale_method=str(args.roi_upscale_method),
+        final_export_mode=str(args.final_export_mode),
         gt_json_path_for_metadata=(
             str(args.selective_oracle_rerank_gt)
             if args.selective_oracle_rerank_gt
