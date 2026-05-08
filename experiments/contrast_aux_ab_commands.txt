@@ -1,0 +1,49 @@
+contrast_aux_v1 — A/B 실행·산출물 안내
+========================================
+
+단일 샘플 (runner/run_local.py)
+------------------------------
+baseline (플래그 끔):
+  python runner/run_local.py \
+    --image_path <PNG> \
+    --manual_inputs_path <MI.json> \
+    --output_json_path <out/baseline_result.json> \
+    --debug_dir <out/debug_baseline>
+
+experiment:
+  python runner/run_local.py \
+    --image_path <PNG> \
+    --manual_inputs_path <MI.json> \
+    --output_json_path <out/exp_result.json> \
+    --debug_dir <out/debug_exp> \
+    --use-contrast-aux \
+    --contrast-aux-weight 0.25 \
+    --contrast-aux-min-base-conf 0.15
+
+선택 튜닝:
+  --contrast-aux-bg-kernel-ratio 0.035
+  --contrast-aux-border-suppress-px 8
+
+배치 (runner/batch_run.py)
+----------------------------
+동일 manifest·동일 출력 루트에 서브폴더를 나누거나, 출력 디렉터리를 두 번 돌려 비교한다.
+
+  python runner/batch_run.py --manifest_csv <CSV> --output_dir <baseline_dir> ...
+
+  python runner/batch_run.py --manifest_csv <CSV> --output_dir <exp_dir> \
+    --use-contrast-aux --contrast-aux-weight 0.25 --contrast-aux-min-base-conf 0.15 ...
+
+디버그 산출물 (각 debug_* 디렉터리)
+-----------------------------------
+  contrast_aux_map.png                    (실험 팔에서만)
+  trace_path_contrast_aux_overlay.png    (실험 팔에서만)
+  candidate_conf_before_after.json
+  contrast_aux_ab_log.json
+  debug.json 안의 contrast_aux, v1_options
+
+평가 로그
+---------
+표준 stderr 한 줄:
+  [contrast_aux_ab] arm=baseline|experiment sample=<stem> -> .../contrast_aux_ab_log.json
+
+성공·폐기 기준 문구는 contrast_aux_ab_log.json 및 debug.json["contrast_aux"]["ab_criteria"] 참고.

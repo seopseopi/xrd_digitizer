@@ -1,0 +1,111 @@
+코드로 고칠 만한 지점 — 증상 → 원인 가설 → 파일 → 개선 방향
+=========================================================
+
+배경: phase-b에서 `grid_confusion`·높은 `curve_y_mae_px`가 반복되고, 게이트는 곡선 MAE·주피크 x를
+엄격히 요구한다. 아래는 **알고리즘/방법을 바꿀 때 손대기 좋은 레이어**를 우선순위 감각으로 정리한 것이다.
+
+
+P0 — 격자·배경이 마스크/후보에 섞이는 문제 (가장 큰 레버)
+--------------------------------------------------------
+증상: `grid_confusion`, 곡선 MAE 정체, 후보는 많은데 열당 잘못된 y.
+
+가설:
+- `mask_b`(Sobel)가 **세로 격자선**을 곡선과 비슷한 “에지”로 올리고, `combine_masks`가 이를 색 마스크와 합쳐
+  **원하지 않는 세로 능선**이 후보에 남는다.
+- 색 거리만으로는 격자와 데이터 곡선이 비슷한 색인 차트가 있다.
+
+코드 위치:
+- preprocess/masks.py — `build_mask_b`, `combine_masks`, `mask_axis_lines`
+- preprocess/color_model.py — `build_color_prototypes`, `compute_color_distance_map`, 적응형 임계
+- runner/run_local.py — 마스크 결합 순서·`mask_axis_lines` margin
+
+개선 방향(택1~복합):
+1. **격자 전용 억제**: ROI에서 주기적 세로선(FFT/자기상관/Hough) 또는 “세로 에지 밀도” 맵을 만들어
+   `mask_b` 또는 combined 이후에 곱해서 제거.
+2. **combine 규칙 변경**: `mask_b`를 색 마스크 **내부**로만 제한하거나, 곡선 방향 필터(수평 성분만 등)로
+   세로 능선 기여 감소.
+3. **색 모델**: 클릭 다점·로컬 배경 샘플로 프로토타입 분리, 또는 Lab 거리 + 채도 게이트.
+
+측정: 동일 `phase-b`에서 `curve_y_mae_px`, failure_taxonomy의 `grid_confusion` 카운트.
+
+
+P1 — 후보 신뢰도·DP가 “잘못된 능선”을 고르는 문제
+--------------------------------------------------
+증상: 열마다 후보는 있는데(`candidate_recall` 높음) 경로가 틀림.
+
+가설:
+- `trace/candidates.py`의 `_candidate_confidence`는 색·연속성·컴포넌트·축거리 조합인데,
+  **격자선과 곡선을 분리할 신호가 부족**하다.
+- `trace/dp_trace.py`는 열별 DP로 **국소 최적**이며, 전역 일관성·다중 경로 비교는 약하다.
+
+코드 위치:
+- trace/candidates.py — `_candidate_confidence`, `filter_candidates`, `build_final_candidates`(스켈레톤 힌트)
+- trace/dp_trace.py — `ALPHA`…`COMP_SWITCH_THRESH`, `_border_penalty`, `_compute_window`
+
+개선 방향:
+1. 후보 단계에서 **세로 능선 응답과 곡선 방향**을 함께 쓰는 항(옵션 ridge는 있으나 clean에서 trade-off 있었음)을
+   **도메인별 가중** 또는 “격자 의심 열”에만 적용.
+2. DP에 **전역 항**: 예) 스무딩된 열 중앙선과의 편차 페널티, 또는 짧은 구간에서 2-pass DP(앞뒤 스캔).
+3. `BLOCK_SIZE`/윈도를 적응형으로 하거나, `path_margin_instability`가 큰 구간만 윈도 확대(실험).
+
+측정: `path_margin_instability`, `curve_y_mae_px`, recovery 트리거 빈도.
+
+
+P2 — Recovery가 격자 혼동을 충분히 되돌리지 못함
+-----------------------------------------------
+증상: DP 잠금 후 구간 오류가 남음.
+
+코드 위치:
+- trace/recovery.py — `detect_recovery_zones`, 트리거 임계, `THRESHOLD_RELAX_STEPS`, 로컬 재추적
+
+개선 방향:
+- `grid_confusion`과 연동된 **전용 트리거**(예: 연속 열에서 후보 상위2개 margin이 작고 색 거리 차이도 작을 때)
+  를 넣어 해당 구간만 후보 재랭킹/재DP.
+- 존 내 `filter_candidates` 완화 폭을 스텝별로 조정.
+
+측정: `recovery_success_rate`, `reentry_count`, 구간별 MAE.
+
+
+P3 — 피크: recall vs 주피크 x 정렬 트레이드오프
+----------------------------------------------
+증상: 2패스 prominence는 recall↑, clean `major_peak_x_error` 평균 소폭↑.
+
+코드 위치:
+- trace/postprocess.py — `detect_peaks`, `LOOSE_PEAK_PROMINENCE_FACTOR`, NMS, `MAJOR_PEAK_*`
+- calibrate 쪽 major 플래그 산출 (peak_positions_2theta `is_major`)
+
+개선 방향:
+- **major 선정 규칙**을 prominence 외에 “곡선 상 국소 최대”·“GT 없이 자기일관”으로 보강.
+- 2패스 느슨 계수를 샘플 길이/스NR에 따라 적응형.
+
+측정: `peak_recall`, `major_peak_x_error`, debug `peak_f1`.
+
+
+P4 — 평가·지표 자체의 왜곡 (파이프라인이 아니라 측정)
+-----------------------------------------------
+증상: 작은 보정 오차가 MAE에 증폭되거나, 열 정렬 `round` 때문에 불연속.
+
+코드 위치:
+- eval/metrics.py — `_curve_y_mae` 의 `col = int(round(px))`, GT와의 1:1 열 매칭
+
+개선 방향:
+- **서브픽셀 열 보간**으로 GT y를 잡거나, 가장 가까운 GT 세그먼트에 투영하는 방식으로 지표를 바꿔
+  “진짜 곡선 오차”에 가깝게 측정(연구용으로 병행 지표 추천).
+
+주의: 지표를 바꾸면 과거 리포트와 직접 비교가 어려우므로 **v2 지표**처럼 버전을 나누는 것이 좋다.
+
+
+권장 작업 순서 (연구 루프)
+-------------------------
+1. 샘플 1~2개에 대해 debug 이미지(`raw_candidate_mask`, `candidate_map_final`, `trace_path`)를 보며
+   **격자가 마스크에 들어오는지** 확인 → P0 손대기.
+2. 동일 샘플에서 `debug.json`의 `candidate_stats`, DP `blockwise`로 **어느 열에서 틀어지는지** 확인 → P1.
+3. 그 다음 recovery(P2), 피크(P3).
+4. 지표(P4)는 파이프라인 한계와 분리해 논문/내부용으로 정리.
+
+관련 문서
+---------
+- experiments/eval_methodology_ko.txt — 지표·게이트 정의
+- experiments/ablation_eval_analysis.txt — 플래그 조합 요약
+
+(끝)

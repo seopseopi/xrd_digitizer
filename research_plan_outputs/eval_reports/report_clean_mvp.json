@@ -1,0 +1,1337 @@
+{
+  "summary": {
+    "domain": "clean",
+    "gate_level": "mvp",
+    "num_samples": 10,
+    "pass_rate": 0.1,
+    "verdict": "fail"
+  },
+  "metadata": {
+    "manifest_csv": "/Users/seopseopi/Library/CloudStorage/SynologyDrive-MATERAI/5. xrd_team/1. XRD/민섭/xrd_digitizer_v1/outputs/0504/runs/eval_ablation_08_ridge_m4_peak1/clean/_manifest_resolved.csv",
+    "output_dir": "/Users/seopseopi/Library/CloudStorage/SynologyDrive-MATERAI/5. xrd_team/1. XRD/민섭/xrd_digitizer_v1/outputs/0504/runs/eval_ablation_08_ridge_m4_peak1/clean",
+    "gate_type": "clean",
+    "gate_level": "mvp",
+    "num_samples": 10,
+    "git_commit": null,
+    "run_tag": null
+  },
+  "samples": [
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 14.2537,
+          "major_peak_x_error": 49.0663,
+          "peak_recall": 0.75,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.044484,
+          "major_peak_x_error_2theta": 3.410218
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 9778.67,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.5,
+          "peak_f1": 0.6,
+          "prominence_preservation": 0.6019,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.4737
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 14.2537,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 49.0663,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.75,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.044484,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 3.410218,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_74680"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 16.4854,
+          "major_peak_x_error": 68.0894,
+          "peak_recall": 0.3333,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.050669,
+          "major_peak_x_error_2theta": 4.726552
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 13686.74,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.25,
+          "peak_f1": 0.2857,
+          "prominence_preservation": 0.5435,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.4737
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 16.4854,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 68.0894,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.3333,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": false
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.050669,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 4.726552,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_72296"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 11.1277,
+          "major_peak_x_error": 21.1361,
+          "peak_recall": 0.5714,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.044388,
+          "major_peak_x_error_2theta": 1.469004
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 6808.71,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.3333,
+          "peak_f1": 0.4211,
+          "prominence_preservation": 1.0,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.5
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 11.1277,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 21.1361,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.5714,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.044388,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 1.469004,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_83520"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 11.6673,
+          "major_peak_x_error": 46.3456,
+          "peak_recall": 0.6667,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.053184,
+          "major_peak_x_error_2theta": 3.221121
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 6250.27,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.1667,
+          "peak_f1": 0.2667,
+          "prominence_preservation": 0.5877,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.5
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 11.6673,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 46.3456,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.6667,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.053184,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 3.221121,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "peak_miss_after_smoothing",
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_69750"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 15.0387,
+          "major_peak_x_error": 14.2976,
+          "peak_recall": 0.625,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.048389,
+          "major_peak_x_error_2theta": 0.993713
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 7814.09,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.5455,
+          "peak_f1": 0.5825,
+          "prominence_preservation": 0.7352,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9789,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.3947
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 15.0387,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 14.2976,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.625,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.048389,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 0.993713,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [],
+      "sample_id": "pattern_83487"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 12.7325,
+          "major_peak_x_error": 4.6919,
+          "peak_recall": 0.625,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.046317,
+          "major_peak_x_error_2theta": 0.326099
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 6785.19,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.5,
+          "peak_f1": 0.5556,
+          "prominence_preservation": 0.5855,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.5
+        }
+      },
+      "gate": {
+        "passed": true,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 12.7325,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 4.6919,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "peak_recall": {
+            "value": 0.625,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.046317,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 0.326099,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": true
+          }
+        }
+      },
+      "failure_labels": [
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_83276"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 12.1025,
+          "major_peak_x_error": 25.5885,
+          "peak_recall": 0.8571,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.052933,
+          "major_peak_x_error_2theta": 1.778458
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 10344.25,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.3478,
+          "peak_f1": 0.4948,
+          "prominence_preservation": 0.5769,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.4211
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 12.1025,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 25.5885,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.8571,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.052933,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 1.778458,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "peak_miss_after_smoothing",
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_83331"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 13.4268,
+          "major_peak_x_error": 25.7111,
+          "peak_recall": 0.8333,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.04461,
+          "major_peak_x_error_2theta": 1.765132
+        },
+        "debug": {
+          "IoU": 0.9716,
+          "valid_ratio": 0.9979,
+          "trace_score": 8072.97,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.4167,
+          "peak_f1": 0.5556,
+          "prominence_preservation": 0.6645,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.5
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 13.4268,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 25.7111,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.8333,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.04461,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 1.765132,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_60890"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 15.4032,
+          "major_peak_x_error": 89.9427,
+          "peak_recall": 0.375,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.044133,
+          "major_peak_x_error_2theta": 6.251218
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 9030.57,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.5,
+          "peak_f1": 0.4286,
+          "prominence_preservation": 0.8199,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9663,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.3158
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 15.4032,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 89.9427,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.375,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": false
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.044133,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 6.251218,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [],
+      "sample_id": "pattern_69527"
+    },
+    {
+      "metrics": {
+        "main": {
+          "curve_y_mae_px": 13.9313,
+          "major_peak_x_error": 46.6757,
+          "peak_recall": 0.7143,
+          "max_gap_px": 1,
+          "calibration_roundtrip_error": 0.0,
+          "numeric_y_mae_norm": 0.050182,
+          "major_peak_x_error_2theta": 3.244062
+        },
+        "debug": {
+          "IoU": 0.9653,
+          "valid_ratio": 0.9979,
+          "trace_score": 11842.75,
+          "tail_mae_px": 0.0,
+          "tail_collapse_rate": 0.0,
+          "peak_precision": 0.2941,
+          "peak_f1": 0.4167,
+          "prominence_preservation": 0.6998,
+          "major_peak_y_error": 0.0
+        },
+        "diagnosis": {
+          "candidate_recall_per_column": 0.9916,
+          "empty_column_rate": 0.0021,
+          "recovery_success_rate": 1.0,
+          "reentry_count": 0,
+          "path_margin_instability": 0.4211
+        }
+      },
+      "gate": {
+        "passed": false,
+        "gate_type": "clean",
+        "gate_level": "mvp",
+        "details": {
+          "curve_y_mae_px": {
+            "value": 13.9313,
+            "threshold": 18.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error": {
+            "value": 46.6757,
+            "threshold": 12.0,
+            "operator": "<=",
+            "passed": false
+          },
+          "peak_recall": {
+            "value": 0.7143,
+            "threshold": 0.5,
+            "operator": ">=",
+            "passed": true
+          },
+          "max_gap_px": {
+            "value": 1.0,
+            "threshold": 30.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "calibration_roundtrip_error": {
+            "value": 0.0,
+            "threshold": 2.0,
+            "operator": "<=",
+            "passed": true
+          },
+          "numeric_y_mae_norm": {
+            "value": 0.050182,
+            "threshold": 0.12,
+            "operator": "<=",
+            "passed": true
+          },
+          "major_peak_x_error_2theta": {
+            "value": 3.244062,
+            "threshold": 0.8,
+            "operator": "<=",
+            "passed": false
+          }
+        }
+      },
+      "failure_labels": [
+        "peak_miss_after_smoothing",
+        "grid_confusion"
+      ],
+      "sample_id": "pattern_83398"
+    }
+  ],
+  "aggregate": {
+    "total_samples": 10,
+    "pass_count": 1,
+    "pass_rate": 0.1,
+    "main_metrics_stats": {
+      "curve_y_mae_px": {
+        "mean": 13.61691,
+        "std": 1.644804,
+        "median": 13.67905,
+        "p10": 11.61334,
+        "p90": 15.51142,
+        "min": 11.1277,
+        "max": 16.4854
+      },
+      "major_peak_x_error": {
+        "mean": 39.15449,
+        "std": 24.734903,
+        "median": 36.02835,
+        "p10": 13.33703,
+        "p90": 70.27473,
+        "min": 4.6919,
+        "max": 89.9427
+      },
+      "peak_recall": {
+        "mean": 0.63511,
+        "std": 0.164936,
+        "median": 0.64585,
+        "p10": 0.37083,
+        "p90": 0.83568,
+        "min": 0.3333,
+        "max": 0.8571
+      },
+      "max_gap_px": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "p10": 1.0,
+        "p90": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "calibration_roundtrip_error": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "numeric_y_mae_norm": {
+        "mean": 0.047929,
+        "std": 0.003433,
+        "median": 0.047353,
+        "p10": 0.044362,
+        "p90": 0.052958,
+        "min": 0.044133,
+        "max": 0.053184
+      },
+      "major_peak_x_error_2theta": {
+        "mean": 2.718558,
+        "std": 1.719651,
+        "median": 2.49979,
+        "p10": 0.926952,
+        "p90": 4.879019,
+        "min": 0.326099,
+        "max": 6.251218
+      }
+    },
+    "debug_metrics_stats": {
+      "IoU": {
+        "mean": 0.96593,
+        "std": 0.00189,
+        "median": 0.9653,
+        "p10": 0.9653,
+        "p90": 0.96593,
+        "min": 0.9653,
+        "max": 0.9716
+      },
+      "valid_ratio": {
+        "mean": 0.9979,
+        "std": 0.0,
+        "median": 0.9979,
+        "p10": 0.9979,
+        "p90": 0.9979,
+        "min": 0.9979,
+        "max": 0.9979
+      },
+      "trace_score": {
+        "mean": 9041.421,
+        "std": 2279.863798,
+        "median": 8551.77,
+        "p10": 6731.698,
+        "p90": 12027.149,
+        "min": 6250.27,
+        "max": 13686.74
+      },
+      "tail_mae_px": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "tail_collapse_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "peak_precision": {
+        "mean": 0.38541,
+        "std": 0.120265,
+        "median": 0.38225,
+        "p10": 0.24167,
+        "p90": 0.50455,
+        "min": 0.1667,
+        "max": 0.5455
+      },
+      "peak_f1": {
+        "mean": 0.46073,
+        "std": 0.112343,
+        "median": 0.4617,
+        "p10": 0.2838,
+        "p90": 0.58425,
+        "min": 0.2667,
+        "max": 0.6
+      },
+      "prominence_preservation": {
+        "mean": 0.68149,
+        "std": 0.133581,
+        "median": 0.6332,
+        "p10": 0.57356,
+        "p90": 0.83791,
+        "min": 0.5435,
+        "max": 1.0
+      },
+      "major_peak_y_error": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "diagnosis_metrics_stats": {
+      "candidate_recall_per_column": {
+        "mean": 0.9878,
+        "std": 0.008105,
+        "median": 0.9916,
+        "p10": 0.97764,
+        "p90": 0.9916,
+        "min": 0.9663,
+        "max": 0.9916
+      },
+      "empty_column_rate": {
+        "mean": 0.0021,
+        "std": 0.0,
+        "median": 0.0021,
+        "p10": 0.0021,
+        "p90": 0.0021,
+        "min": 0.0021,
+        "max": 0.0021
+      },
+      "recovery_success_rate": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "p10": 1.0,
+        "p90": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "reentry_count": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "path_margin_instability": {
+        "mean": 0.45001,
+        "std": 0.058191,
+        "median": 0.4737,
+        "p10": 0.38681,
+        "p90": 0.5,
+        "min": 0.3158,
+        "max": 0.5
+      }
+    },
+    "failure_taxonomy_counts": {
+      "grid_confusion": 8,
+      "peak_miss_after_smoothing": 3
+    },
+    "core_metrics_stats": {
+      "curve_y_mae_px": {
+        "mean": 13.61691,
+        "std": 1.644804,
+        "median": 13.67905,
+        "p10": 11.61334,
+        "p90": 15.51142,
+        "min": 11.1277,
+        "max": 16.4854
+      },
+      "major_peak_x_error": {
+        "mean": 39.15449,
+        "std": 24.734903,
+        "median": 36.02835,
+        "p10": 13.33703,
+        "p90": 70.27473,
+        "min": 4.6919,
+        "max": 89.9427
+      },
+      "peak_recall": {
+        "mean": 0.63511,
+        "std": 0.164936,
+        "median": 0.64585,
+        "p10": 0.37083,
+        "p90": 0.83568,
+        "min": 0.3333,
+        "max": 0.8571
+      },
+      "max_gap_px": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "p10": 1.0,
+        "p90": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "calibration_roundtrip_error": {
+        "mean": 0.0,
+        "std": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "numeric_y_mae_norm": {
+        "mean": 0.047929,
+        "std": 0.003433,
+        "median": 0.047353,
+        "p10": 0.044362,
+        "p90": 0.052958,
+        "min": 0.044133,
+        "max": 0.053184
+      },
+      "major_peak_x_error_2theta": {
+        "mean": 2.718558,
+        "std": 1.719651,
+        "median": 2.49979,
+        "p10": 0.926952,
+        "p90": 4.879019,
+        "min": 0.326099,
+        "max": 6.251218
+      }
+    }
+  },
+  "core_metrics_stats": {
+    "curve_y_mae_px": {
+      "mean": 13.61691,
+      "std": 1.644804,
+      "median": 13.67905,
+      "p10": 11.61334,
+      "p90": 15.51142,
+      "min": 11.1277,
+      "max": 16.4854
+    },
+    "major_peak_x_error": {
+      "mean": 39.15449,
+      "std": 24.734903,
+      "median": 36.02835,
+      "p10": 13.33703,
+      "p90": 70.27473,
+      "min": 4.6919,
+      "max": 89.9427
+    },
+    "peak_recall": {
+      "mean": 0.63511,
+      "std": 0.164936,
+      "median": 0.64585,
+      "p10": 0.37083,
+      "p90": 0.83568,
+      "min": 0.3333,
+      "max": 0.8571
+    },
+    "max_gap_px": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "p10": 1.0,
+      "p90": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "calibration_roundtrip_error": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "numeric_y_mae_norm": {
+      "mean": 0.047929,
+      "std": 0.003433,
+      "median": 0.047353,
+      "p10": 0.044362,
+      "p90": 0.052958,
+      "min": 0.044133,
+      "max": 0.053184
+    },
+    "major_peak_x_error_2theta": {
+      "mean": 2.718558,
+      "std": 1.719651,
+      "median": 2.49979,
+      "p10": 0.926952,
+      "p90": 4.879019,
+      "min": 0.326099,
+      "max": 6.251218
+    }
+  },
+  "debug_metrics_stats": {
+    "IoU": {
+      "mean": 0.96593,
+      "std": 0.00189,
+      "median": 0.9653,
+      "p10": 0.9653,
+      "p90": 0.96593,
+      "min": 0.9653,
+      "max": 0.9716
+    },
+    "valid_ratio": {
+      "mean": 0.9979,
+      "std": 0.0,
+      "median": 0.9979,
+      "p10": 0.9979,
+      "p90": 0.9979,
+      "min": 0.9979,
+      "max": 0.9979
+    },
+    "trace_score": {
+      "mean": 9041.421,
+      "std": 2279.863798,
+      "median": 8551.77,
+      "p10": 6731.698,
+      "p90": 12027.149,
+      "min": 6250.27,
+      "max": 13686.74
+    },
+    "tail_mae_px": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "tail_collapse_rate": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "peak_precision": {
+      "mean": 0.38541,
+      "std": 0.120265,
+      "median": 0.38225,
+      "p10": 0.24167,
+      "p90": 0.50455,
+      "min": 0.1667,
+      "max": 0.5455
+    },
+    "peak_f1": {
+      "mean": 0.46073,
+      "std": 0.112343,
+      "median": 0.4617,
+      "p10": 0.2838,
+      "p90": 0.58425,
+      "min": 0.2667,
+      "max": 0.6
+    },
+    "prominence_preservation": {
+      "mean": 0.68149,
+      "std": 0.133581,
+      "median": 0.6332,
+      "p10": 0.57356,
+      "p90": 0.83791,
+      "min": 0.5435,
+      "max": 1.0
+    },
+    "major_peak_y_error": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    }
+  },
+  "diagnosis_metrics_stats": {
+    "candidate_recall_per_column": {
+      "mean": 0.9878,
+      "std": 0.008105,
+      "median": 0.9916,
+      "p10": 0.97764,
+      "p90": 0.9916,
+      "min": 0.9663,
+      "max": 0.9916
+    },
+    "empty_column_rate": {
+      "mean": 0.0021,
+      "std": 0.0,
+      "median": 0.0021,
+      "p10": 0.0021,
+      "p90": 0.0021,
+      "min": 0.0021,
+      "max": 0.0021
+    },
+    "recovery_success_rate": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "p10": 1.0,
+      "p90": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "reentry_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "path_margin_instability": {
+      "mean": 0.45001,
+      "std": 0.058191,
+      "median": 0.4737,
+      "p10": 0.38681,
+      "p90": 0.5,
+      "min": 0.3158,
+      "max": 0.5
+    }
+  },
+  "failure_taxonomy_counts": {
+    "grid_confusion": 8,
+    "peak_miss_after_smoothing": 3
+  },
+  "top_failure_labels": {
+    "grid_confusion": 8,
+    "peak_miss_after_smoothing": 3
+  },
+  "decision": {
+    "relative_to_baseline": "unknown",
+    "next_action": "review_axis_mask_and_color"
+  },
+  "gate_type": "clean",
+  "gate_level": "mvp"
+}

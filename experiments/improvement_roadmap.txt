@@ -1,0 +1,47 @@
+개선 로드맵 — 단계별 실행 (v1.1)
+================================
+
+진행 상태: [ ] 미착수  [~] 진행 중  [x] 완료
+
+Step 1 — 마스크·전처리 (비용 대비 효과 우선)
+  [x] 1a  build_mask_b 적응형 임계값 (Sobel magnitude p70, clip 18..48; edge_threshold=None 기본)
+        검증: eval_step1a_maskb (10샘플) — 전체 지표는 베이스와 동급, real_like peak_recall 소폭↑
+  [x] 1b  edge용 그레이 퍼센타일 스트레치(3–97%) 후 Sobel (CLAHE 대신 무의존)
+        검증 eval_step1b_stretch: clean MAE 소폭↓, real_like major_peak_x ~23→~18,
+        styled peak_recall 소폭↓ → 전체 유지(실데이터 real 피크 정렬 이득 우선)
+  [x] 1c  mask_axis_lines margin: `batch_run` / `phase-b` / `run_local` 에 `--axis-mask-margin PX` (기본 3)
+        검증 eval_step1c_m4 (10샘플): clean mean curve_y_mae_px ~13.59 (베이스 ~13.65대) 소폭↓,
+        대신 max_gap_px·empty_column_rate 소폭 악화 → **기본 3 유지**, 필요 시 도메인별 배치만 4 시도
+
+Step 2 — 후보·DP 사이
+  [x] 2a  build_final_candidates: 스켈레톤 열별 y 힌트(+창 스무딩)로 DP 후보 정렬 보조
+        검증: eval_goal1_try5_stronghint — clean mean curve_y_mae_px ~13.65 (step1b ~13.73),
+        real_like mean ~19.68 (try4 ~19.78); 1차 중간목표 12px 미만 미달, 격자 혼동 여전
+  [x] 2b  `--use-ridge-candidates` 로 `compute_vertical_ridge_response` → build_raw_candidates 가산
+        검증 eval_step2b_ridge: clean curve_y_mae_px ~동일, major_peak_x 평균 악화(~39 vs ~29);
+        styled/real_like 곡선 MAE는 일부 개선 → **기본은 끔**, 실데이터 배치만 플래그로 켜기
+
+Step 3 — 피크
+  [x] 3a  detect_peaks: 완화 prominence 2패스 후 동일 열 최대 prominence 병합 + 인덱스 NMS
+        기본 켜짐; `phase-b --peak-single-pass` 로 단일 패스.
+        검증 eval_step3a_peak2pass vs legacy_single (10샘플): clean peak_recall ~0.75 vs ~0.64,
+        styled ~0.55 vs ~0.38, real_like ~0.57 vs ~0.50; clean major_peak_x 평균 소폭↑(~30.3 vs ~29.6)
+  [x] 3b  GT peak_indices 간격 통계 → experiments/gt_peak_spacing_stats.txt
+        (scripts/analyze_gt_peak_spacing.py) 100샘플: 최소간격 p50≈37.5, formula 대비 부족 비율 ~3%;
+        현재 max(3, round(0.004*N)) 유지 + 3a NMS 보조가 타당
+
+Step 4 — 좌표·perspective
+  [x] 4a  experiments/perspective_ui_guide.txt — 워핑 후 축·색 재클릭 권장, axis_mapping 주석과 정합
+
+Step 5 — 학습 기반 (장기)
+  [~] 5a  데이터·스택 확정 후 LineFormer/ChartLine 등 검토 (보류, 스택 확정 시 재개)
+
+검증 (매 스텝)
+  .venv_eval/bin/python scripts/run_eval_plan.py --repo-root . phase-b \\
+    --max-samples 10 --tag step<N>_설명
+
+참고: phase1_curve_continuity.txt 에 ablation·피크 변경 이력이 있음.
+플래그 매트릭스: scripts/run_eval_ablation_matrix.py → experiments/ablation_eval_summary.tsv
+요약 해설: experiments/ablation_eval_analysis.txt
+게이트 판정: scripts/verdict_eval_reports.py → experiments/verdict_ablation.txt (pass_rate + 평균 대비 실패 항목)
+평가 방법론 전체: experiments/eval_methodology_ko.txt

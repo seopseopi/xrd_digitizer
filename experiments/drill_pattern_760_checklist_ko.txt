@@ -1,0 +1,67 @@
+pattern_760 전용 드릴 — P0/P1 관찰 체크리스트
+============================================
+
+실행 (재현)
+-----------
+저장소 루트에서 이미 한 번 생성됨:
+
+  outputs/runs/drill_pattern_760/
+    pattern_760_result.json
+    debug_pattern_760/   ← PNG 오버레이·debug.json
+    _mi_pattern_760.json
+
+재실행 예:
+  python3 -c "
+  from pathlib import Path; import sys
+  sys.path.insert(0, '.')
+  from runner.batch_run import _ensure_manual_inputs_for_gt
+  from runner.run_local import run_single
+  R = Path('.').resolve()
+  o = R/'outputs/runs/drill_pattern_760'
+  o.mkdir(parents=True, exist_ok=True)
+  mi = _ensure_manual_inputs_for_gt(str(R/'data/gt/pattern_760_gt.json'), str(o/'_mi_pattern_760.json'))
+  run_single(str(R/'data/rendered_clean/pattern_760_clean_v1.png'), mi,
+             str(o/'pattern_760_result.json'), str(o/'debug_pattern_760'))
+  "
+
+clean 게이트 (eval, 현재 코드·임계값)
+------------------------------------
+- **passed: True** (760은 “잘 되는” 샘플로 쓰기 좋음)
+- main 지표 (대략):
+  - curve_y_mae_px ≈ 3.65  (임계 5.0 이하)
+  - major_peak_x_error ≈ 0.78 (임계 4.0 이하)
+  - peak_recall = 0.75 (임계 0.70 이상)
+  - max_gap_px = 0, calibration_roundtrip_error = 0
+
+진단 숫자 (debug.json / metrics)
+-------------------------------
+- candidate_recall_per_column ≈ 0.988
+- path_margin_instability ≈ 0.47 (wrong_branch_lock_in 임계 0.6 미만)
+- IoU ≈ 0.999, valid_ratio = 1.0
+- raw_candidate_pixels ≈ 6162, **skeleton_pixels = 7** (매우 적음 — 스켈레톤 힌트는 이 차트에서 거의 신호 없음)
+- recovery_triggered: False
+
+실패 라벨 (label_failures)
+--------------------------
+- 없음 (빈 리스트)
+
+P0 (마스크·격자) 이 샘플에서 볼 것
+----------------------------------
+1. `debug_pattern_760/combined_mask.png`, `color_mask.png`, `raw_candidate_mask.png`
+   → 격자 세로선이 마스크에 붙어 있는지 눈으로 확인.
+2. debug.json `raw_candidate_pixels` vs GT 플롯 영역 — 과다면 색/edge 결합 튜닝 여지는 있으나
+   **760은 최종 MAE가 낮아** P0 이슈는 상대적으로 작은 편.
+
+P1 (후보·DP) 이 샘플에서 볼 것
+------------------------------
+1. `candidate_map_raw.png` / `candidate_map_final.png` — 열별 후보가 한 줄로 모이는지.
+2. `trace_path.png`, `branch_compare.png`
+3. `trace.blockwise` (debug.json) — margin 분포가 낮은 구간이 있는지 (instability ≈0.47 수준).
+
+연구 시 활용
+-----------
+- **양호 케이스 베이스라인**: 리팩터·회귀 시 “760은 반드시 통과 유지”로 쓸 수 있음.
+- **격자/고MAE 디버깅**은 phase-b에서 실패가 많았던 샘플(예: pattern_72296, pattern_60890 등)과
+  짝을 이루어 비교하는 것이 효과적이다. 760만으로는 P0 실패 패턴이 잘 안 드러난다.
+
+관련 문서: experiments/code_improvement_targets_ko.txt

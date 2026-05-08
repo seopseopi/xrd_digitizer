@@ -1,0 +1,30 @@
+# Python caches / virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.venv*/
+venv/
+env/
+
+# Local OS/editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Private/local datasets
+/data/
+/research_plan_outputs/02_dataset/
+
+# Generated outputs and build artifacts
+/outputs/
+/debug_artifacts/
+/dist/
+/experiments/archive/
+*.zip
+*.tar.gz

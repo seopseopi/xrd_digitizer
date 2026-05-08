@@ -1,0 +1,8 @@
+numpy
+pandas
+Pillow
+scipy
+pytest
+
+# Optional ML utilities
+torch

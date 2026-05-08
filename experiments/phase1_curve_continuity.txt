@@ -1,0 +1,76 @@
+Phase 1 — 곡선 정합 1차 목표 (v1.1 / calibrate_v1_1)
+================================================
+
+1차 목표 (수치)
+  - clean 매니페스트 소표본(예: 10장) 기준 평균 curve_y_mae_px 를
+    기준선(~13.7px 부근) 대비 유의하게 낮추는 것 (중간 목표: 평균 < 12px,
+    이상적으로 < 10px).
+  - 최종 게이트(≤5px)는 Phase 2 이후로 분리; 1차에서는 MAE·진단 위주.
+
+단계별 계획
+  Step 0 — 회귀 고정: scripts/run_eval_plan.py phase-b --max-samples N 으로
+           동일 태그·동일 N에서 리포트 비교.
+  Step 1 — 경로 연속성(DP): 열 간 이웃 후보 비용에서 2차 차분(d2y) 패널티를
+           강화해 “평행 능선” 간 점프를 억제 (아래 연구 정합).
+  Step 2 — 후처리: Savitzky–Golay 창이 피크 형태를 지나치게 뭉개면
+           peak_f1 / major_peak_x 에 불리할 수 있으므로, 필요 시 창 상한·
+           peak-preservation 재시도만 조정 (Step 1 결과 보고 선택).
+  Step 3 — 마스크·색: styled/real_like 는 ChartLine 등이 강조하는
+           전경/배경 분리 쪽 추가 튜닝 (별도 Phase 1b).
+  Step 4 — 학습 기반 파서: LineFormer / AI-ChartParser 는 별도 데이터·
+           의존성이 크므로 장기 옵션으로 문서화만.
+
+연구·방법론 요약 (최근 3~5년 계열)
+  - LineFormer (ICDAR 2023): 라인 차트 추출을 instance segmentation 으로
+    정식화. 곡선·배경 분리와 시각적 일관성에 강점.
+    https://github.com/TheJaeLal/LineFormer
+  - LineEX (WACV 2023): ViT 기반 키포인트·차트 요소 검출 후 그룹화.
+    https://github.com/Shiva-sankaran/LineEX
+  - ChartLine (Sensors 2024): SSA-FPN 으로 곡선 경계·장거리 의존성·
+    연속성(continuity) 강화가 핵심 메시지.
+    https://www.mdpi.com/1424-8220/24/21/7015
+  - AI-ChartParser (Computer Graphics Forum 2025): 다중 태스크로 요소·곡선
+    검출, 수치 매핑 오차 감소.
+    https://onlinelibrary.wiley.com/doi/10.1111/cgf.70146
+  - 고전 정렬: seam carving / 최소 에너지 경로는 열마다 한 픽셀·인접 열
+    전이 제약으로 곡선형 “최적 seam”과 동형; 본 repo 의 dp_trace 가
+    해당 클래스.
+
+본 트리에서의 1차 반영 (코드)
+  - trace/dp_trace.py: GAMMA 0.8→0.95 (낮은 confidence 후보 비용 증가),
+    BETA 0.35→0.42 (이차 차분 패널티 소폭 강화).
+  - trace/candidates.py: 열 간 연속성 lc 가중 0.25→0.30, 색상 0.35→0.30;
+    _local_continuity 분모 8→5.5 (이전 열 best y 에 더 붙는 후보에 유리).
+
+검증 명령 (저장소 루트)
+  .venv_eval/bin/python scripts/run_eval_plan.py --repo-root . phase-b \\
+    --max-samples 10 --tag eval_phase1_after
+
+2026-05-02 로컬 스모크 결과 (10샘플 clean)
+  - 베이스라인: outputs/runs/eval_current_v11/report_clean.json
+    curve_y_mae 평균 ~13.77, peak_recall ~0.62, major_peak_x_error ~29.1
+  - dp_trace BETA만 0.48: eval_phase1_b48 — MAE 거의 동일 (미세 변동만).
+  - candidates(lc 분모·가중) + dp BETA/GAMMA 조합: eval_phase1_combo —
+    MAE ~14.40, peak_recall ~0.45 로 악화 → 해당 코드 변경은 적용하지 않음(리버트).
+  - trace/postprocess SG 창 상한 11→9 시험(eval_phase1_sg9): clean MAE 동일;
+    styled 평균 peak_recall 소폭 상승(~0.37→0.42) vs real 소폭 하락 혼재 →
+    코드는 베이스라인(상한 11) 유지, 필요 시 도메인별 튜닝은 별 이슈로.
+  - 결론: 1차 MAE 목표는 “DP·후보 가중치만”으로는 달성 어렵움;
+    Step 3 마스크·색·ridge 품질, 장기적으로 LineFormer/ChartLine 계열 검출
+    을 권장.
+
+후속 (ridge 응답을 후보 신뢰도에 합산, 2026-05-02)
+  - preprocess/ridge_map.py: 열별 정규화된 |∂gray/∂y| 맵.
+  - trace/candidates.RIDGE_CONF_WEIGHT=0.10 (0.05~0.08 은 styled 주피크 평균 왜곡 위험)
+  - 10샘플 요약 (baseline eval_current_v11 vs ridge eval_ridge_conf_v1):
+    clean  curve_y_mae 13.77→13.66  major_peak_x 29.1→36.8 (악화)
+    styled curve_y_mae 31.3→24.0  major_peak_x 약 29 유지
+    real   curve_y_mae 19.8→15.2
+  - 비활성: run_local 에서 build_raw_candidates(..., ridge_map=None)
+
+피크·수치 (2026-05-02)
+  - detect_peaks(..., columns=): trace 세 점 이차 보간으로 y_pixel_refined 만 저장
+    (two_theta 열은 columns[idx] 고정 — 서브픽셀 열 이동은 major_peak_x 평가를 망가뜨림).
+  - export_numeric: pixel_x_to_value / pixel_y_to_value 사용, peak 에 intensity 추가,
+    is_major 는 index 집합으로 판정(기존 dict 동일성 비교 버그 제거).
+  - axis_mapping 모듈 doc: perspective 사용 시 워핑 ROI vs 수동 축 좌표 불일치 가능성 안내.

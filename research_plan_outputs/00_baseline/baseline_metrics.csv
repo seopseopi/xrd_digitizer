@@ -1,0 +1,10 @@
+baseline_role,batch_tag,gate_level,group,sample_count,pass_rate,curve_y_mae_px_mean,major_peak_x_error_mean,peak_recall_mean,max_gap_px_mean,calibration_roundtrip_error_mean,numeric_y_mae_norm_mean,major_peak_x_error_2theta_mean,notes
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,mvp,clean,10,0.10,13.6169,39.1545,0.6351,1.0,0.0,0.0479,2.7186,진단 참조만 (outputs/0504/runs/eval_ablation_08_ridge_m4_peak1). 공식 B0 아님.
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,development,clean,10,0.00,13.6169,39.1545,0.6351,1.0,0.0,0.0479,2.7186,same_batch B1
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,strict,clean,10,0.00,13.6169,39.1545,0.6351,1.0,0.0,0.0479,2.7186,same_batch B1
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,mvp,styled,10,0.60,30.5694,20.3635,0.6095,1.0,0.0,0.0657,1.4119,mean y_mae 왜곡: pattern_72296 이상치(~185px)
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,development,styled,10,0.30,30.5694,20.3635,0.6095,1.0,0.0,0.0657,1.4119,same_batch B1
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,strict,styled,10,0.00,30.5694,20.3635,0.6095,1.0,0.0,0.0657,1.4119,same_batch B1
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,mvp,real_like,10,0.60,19.4031,24.5760,0.4661,1.0,0.0,0.0494,1.7027,pattern_60890 이상치(~58px y_mae)
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,development,real_like,10,0.30,19.4031,24.5760,0.4661,1.0,0.0,0.0494,1.7027,same_batch B1
+B1_diagnostic_reference,B1_ablation08_ridge_m4_peak1,strict,real_like,10,0.00,19.4031,24.5760,0.4661,1.0,0.0,0.0494,1.7027,same_batch B1

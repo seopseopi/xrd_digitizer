@@ -1,0 +1,11 @@
+{
+  "plot_box": [170, 90, 1120, 780],
+  "x_axis_points": [[170, 780], [1120, 780]],
+  "x_axis_values": [10.0, 80.0],
+  "y_axis_points": [[170, 780], [170, 90]],
+  "y_axis_values": [0.0, 15000.0],
+  "color_sample_point": [420, 310],
+  "legend_ignore_boxes": [],
+  "perspective_corners": null,
+  "color_resample_points": []
+}
