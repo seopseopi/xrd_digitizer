@@ -20,15 +20,9 @@ ROI crop, mask, final candidates, DP trace, smoothing 순서로 모델이 그래
 
 ### 피크 검출 예시
 
-같은 샘플의 `debug/14_peaks_overlay.png`에서 peak 검출 결과와 작은 peak 구간을 확대했습니다.
+모델이 복원한 곡선 위에 검출된 peak 위치를 큰 초록색 마커로 표시했습니다.
 
-![XRD 11832 peak detection detail](docs/assets/xrd_11832_peak_detection_detail.png)
-
-### 수치 복원 비교
-
-highres export 결과와 source numeric curve를 비교한 예시입니다. 이미지에서 추적한 곡선을 실제 수치 데이터로 다시 복원한 결과를 확인할 수 있습니다.
-
-![Highres export comparison](docs/assets/xrd_highres_export_comparison.png)
+![XRD 11832 output peak markers](docs/assets/xrd_11832_output_peak_markers.png)
 
 ## 최근 성능 개선
 
