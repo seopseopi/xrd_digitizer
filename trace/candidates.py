@@ -275,6 +275,33 @@ def _candidate_confidence(
     return float(np.clip(conf, 0.0, 1.0))
 
 
+def _candidate_confidence_batch(
+    color_dists: np.ndarray,
+    y_currs: np.ndarray,
+    y_prev: Optional[float],
+    comp_scores: np.ndarray,
+    axis_dists: np.ndarray,
+    ridge_resps: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """Vectorized equivalent of `_candidate_confidence` for one column."""
+    color_dists = np.asarray(color_dists, dtype=np.float64)
+    y_currs = np.asarray(y_currs, dtype=np.float64)
+    comp_scores = np.asarray(comp_scores, dtype=np.float64)
+    axis_dists = np.asarray(axis_dists, dtype=np.float64)
+
+    cc = np.exp(-color_dists / 20.0)
+    if y_prev is None:
+        lc = np.ones_like(cc, dtype=np.float64)
+    else:
+        lc = np.exp(-np.abs(y_currs - float(y_prev)) / 8.0)
+    cs = 1.0 / (1.0 + np.exp(-0.8 * (comp_scores - 2.0)))
+    pen = np.exp(-axis_dists / 6.0)
+    conf = 0.35 * cc + 0.25 * lc + 0.20 * cs + 0.20 * (1.0 - pen)
+    if ridge_resps is not None:
+        conf = conf + RIDGE_CONF_WEIGHT * np.clip(np.asarray(ridge_resps, dtype=np.float64), 0.0, 1.0)
+    return np.clip(conf, 0.0, 1.0)
+
+
 def decompose_candidate_confidence_terms(
     color_dist: float,
     y_curr: float,
@@ -402,16 +429,35 @@ def build_raw_candidates(
             raw_candidates[col] = []
             continue
 
+        ys_int = ys.astype(np.int64, copy=False)
+        color_vals = color_dist_map[ys_int, col].astype(np.float64, copy=False)
+        comp_vals = comp_score_map[ys_int, col].astype(np.float64, copy=False)
+        axis_vals = axis_dist_map[ys_int, col].astype(np.float64, copy=False)
+        ridge_vals = (
+            ridge_map[ys_int, col].astype(np.float64, copy=False)
+            if ridge_map is not None
+            else None
+        )
+        conf_vals = _candidate_confidence_batch(
+            color_vals,
+            ys_int.astype(np.float64, copy=False),
+            prev_best_y,
+            comp_vals,
+            axis_vals,
+            ridge_resps=ridge_vals,
+        )
+
         cands = []
-        for y_val in ys:
-            y_int = int(y_val)
-            cd = float(color_dist_map[y_int, col])
-            cs = float(comp_score_map[y_int, col])
-            ad = float(axis_dist_map[y_int, col])
-            rr = float(ridge_map[y_int, col]) if ridge_map is not None else None
-            conf = _candidate_confidence(cd, float(y_int), prev_best_y, cs, ad, ridge_resp=rr)
-            source = "both" if raw_mask[y_int, col] > 0 and skeleton_mask[y_int, col] > 0 else (
-                "raw" if raw_mask[y_int, col] > 0 else "skeleton"
+        raw_hits = raw_mask[ys_int, col] > 0
+        skel_hits = skeleton_mask[ys_int, col] > 0
+        for i, y_int_np in enumerate(ys_int):
+            y_int = int(y_int_np)
+            cd = float(color_vals[i])
+            cs = float(comp_vals[i])
+            ad = float(axis_vals[i])
+            conf = float(conf_vals[i])
+            source = "both" if raw_hits[i] and skel_hits[i] else (
+                "raw" if raw_hits[i] else "skeleton"
             )
             cands.append({
                 "y": y_int,
@@ -910,6 +956,7 @@ def _trim_candidates_after_bridge(
     roi_w: int,
     W: int,
     max_dp_bridge_frac: Optional[float] = None,
+    expanded_neighbor_measured_y: Optional[Dict[int, np.ndarray]] = None,
 ) -> List[dict]:
     """브리지 행은 신뢰도만으로 잘리지 않도록 일부 슬롯 확보."""
     uniq = _dedupe_candidates_max_conf(cands)
@@ -931,6 +978,13 @@ def _trim_candidates_after_bridge(
         for dc in (-1, 1):
             nc = col + dc
             if nc < 0 or nc >= roi_w:
+                continue
+            if expanded_neighbor_measured_y is not None:
+                ys = expanded_neighbor_measured_y.get(nc)
+                if ys is not None and ys.size:
+                    left = int(np.searchsorted(ys, int(y) - int(W), side="left"))
+                    if left < ys.size and int(ys[left]) <= int(y) + int(W):
+                        b = max(b, 0.25)
                 continue
             for oc in expanded_neighbors.get(nc, []):
                 if oc.get("source") == "dp_bridge":
@@ -964,6 +1018,76 @@ def _trim_candidates_after_bridge(
     return out
 
 
+def _bridge_confidence_batch(
+    color_dists: np.ndarray,
+    comp_scores: np.ndarray,
+) -> np.ndarray:
+    """Vectorized equivalent of the dp_bridge synthetic confidence formula."""
+    color_dists = np.asarray(color_dists, dtype=np.float64)
+    comp_scores = np.asarray(comp_scores, dtype=np.float64)
+    cc = np.exp(-color_dists / 20.0)
+    csu = 1.0 / (1.0 + np.exp(-0.8 * (comp_scores - 2.0)))
+    return np.clip(0.26 + 0.42 * cc * csu, 0.22, 0.52)
+
+
+def _synth_bridge_candidates_batch(
+    col: int,
+    ys: List[int],
+    roi_w: int,
+    roi_h: int,
+    color_dist_map: np.ndarray,
+    comp_score_map: np.ndarray,
+    axis_dist_map: np.ndarray,
+) -> List[dict]:
+    """Create dp_bridge candidates in the caller-provided y order."""
+    if not ys:
+        return []
+    ym = max(0, int(roi_h) - 1)
+    xi = int(np.clip(col, 0, int(roi_w) - 1))
+    ys_arr = np.clip(np.asarray(ys, dtype=np.int64), 0, ym)
+    color_vals = color_dist_map[ys_arr, xi].astype(np.float64, copy=False)
+    comp_vals = comp_score_map[ys_arr, xi].astype(np.float64, copy=False)
+    axis_vals = axis_dist_map[ys_arr, xi].astype(np.float64, copy=False)
+    conf_vals = _bridge_confidence_batch(color_vals, comp_vals)
+    return [
+        {
+            "y": int(ys_arr[i]),
+            "confidence": float(conf_vals[i]),
+            "color_dist": float(color_vals[i]),
+            "comp_score": float(comp_vals[i]),
+            "axis_dist": float(axis_vals[i]),
+            "source": "dp_bridge",
+        }
+        for i in range(int(ys_arr.shape[0]))
+    ]
+
+
+def _collect_missing_bridge_ys_in_order(
+    source_candidates: List[dict],
+    existing_candidates: List[dict],
+    W: int,
+    ym: int,
+) -> List[int]:
+    """Collect bridge y values in the same order as the original nested loops."""
+    missing = np.ones(int(ym) + 1, dtype=bool)
+    for c in existing_candidates:
+        yi = int(c["y"])
+        if 0 <= yi <= ym:
+            missing[yi] = False
+
+    out: List[int] = []
+    for c in source_candidates:
+        yc = int(c["y"])
+        lo = max(0, yc - W)
+        hi = min(ym, yc + W)
+        idx = np.flatnonzero(missing[lo : hi + 1])
+        if idx.size:
+            vals = idx + lo
+            out.extend(int(v) for v in vals)
+            missing[vals] = False
+    return out
+
+
 def bridge_final_candidates_for_dp(
     final: Dict[int, List[dict]],
     roi_w: int,
@@ -989,39 +1113,25 @@ def bridge_final_candidates_for_dp(
     for col in range(roi_w):
         out[col] = [{**c} for c in final.get(col, [])]
 
-    def synth(col: int, y: int) -> dict:
-        yi = int(np.clip(y, 0, ym))
-        xi = int(np.clip(col, 0, roi_w - 1))
-        cd = float(color_dist_map[yi, xi])
-        cs = float(comp_score_map[yi, xi])
-        ad = float(axis_dist_map[yi, xi])
-        cc = _color_consistency(cd)
-        csu = _component_support(cs)
-        conf = float(np.clip(0.26 + 0.42 * cc * csu, 0.22, 0.52))
-        return {
-            "y": yi,
-            "confidence": conf,
-            "color_dist": cd,
-            "comp_score": cs,
-            "axis_dist": ad,
-            "source": "dp_bridge",
-        }
-
     # Forward: col-1 후보에서 한 스텝 도달 가능한 y 전부
     for col in range(1, roi_w):
         prev_list = out[col - 1]
         if not prev_list:
             continue
         cur_list = out[col]
-        have = {int(c["y"]) for c in cur_list}
-        for c in prev_list:
-            yp = int(c["y"])
-            lo = max(0, yp - W)
-            hi = min(ym, yp + W)
-            for y in range(lo, hi + 1):
-                if y not in have:
-                    cur_list.append(synth(col, y))
-                    have.add(y)
+        new_ys = _collect_missing_bridge_ys_in_order(prev_list, cur_list, W, ym)
+        if new_ys:
+            cur_list.extend(
+                _synth_bridge_candidates_batch(
+                    col,
+                    new_ys,
+                    roi_w,
+                    roi_h,
+                    color_dist_map,
+                    comp_score_map,
+                    axis_dist_map,
+                )
+            )
 
     # Backward: col+1 과 연결
     for col in range(roi_w - 2, -1, -1):
@@ -1029,17 +1139,28 @@ def bridge_final_candidates_for_dp(
         if not nxt_list:
             continue
         cur_list = out[col]
-        have = {int(c["y"]) for c in cur_list}
-        for c in nxt_list:
-            yn = int(c["y"])
-            lo = max(0, yn - W)
-            hi = min(ym, yn + W)
-            for y in range(lo, hi + 1):
-                if y not in have:
-                    cur_list.append(synth(col, y))
-                    have.add(y)
+        new_ys = _collect_missing_bridge_ys_in_order(nxt_list, cur_list, W, ym)
+        if new_ys:
+            cur_list.extend(
+                _synth_bridge_candidates_batch(
+                    col,
+                    new_ys,
+                    roi_w,
+                    roi_h,
+                    color_dist_map,
+                    comp_score_map,
+                    axis_dist_map,
+                )
+            )
 
-    expanded = {k: [{**c} for c in v] for k, v in out.items()}
+    expanded = {k: tuple(v) for k, v in out.items()}
+    expanded_measured_y = {
+        k: np.asarray(
+            sorted(int(c["y"]) for c in v if c.get("source") != "dp_bridge"),
+            dtype=np.int32,
+        )
+        for k, v in expanded.items()
+    }
     for col in range(roi_w):
         out[col] = _trim_candidates_after_bridge(
             out[col],
@@ -1050,6 +1171,7 @@ def bridge_final_candidates_for_dp(
             roi_w,
             W,
             max_dp_bridge_frac=max_dp_bridge_frac,
+            expanded_neighbor_measured_y=expanded_measured_y,
         )
 
     return out

@@ -402,6 +402,7 @@ def run_pipeline(
     stage_timings["component_score"] = round(time.perf_counter() - t0, 6)
 
     t0 = time.perf_counter()
+    candidates_total_t0 = t0
     ridge_map = (
         compute_vertical_ridge_response(roi) if use_ridge_candidates else None
     )
@@ -461,14 +462,20 @@ def run_pipeline(
             legend_crop_origin=(int(proc_plot_box_t[0]), int(proc_plot_box_t[1])),
         )
 
+    t_candidate_stage = time.perf_counter()
     raw_cands = build_raw_candidates(
         morph["raw_candidate_mask"], skeleton,
         color_dist, comp_score_map, axis_dist,
         ridge_map=ridge_map,
     )
+    stage_timings["build_raw_candidates_sec"] = round(time.perf_counter() - t_candidate_stage, 6)
     if contrast_aux_settings_proc.use_contrast_aux and contrast_aux_map_np is not None:
+        t_candidate_stage = time.perf_counter()
         contrast_aux_stats = apply_contrast_aux_to_raw_candidates(
             raw_cands, contrast_aux_map_np, contrast_aux_settings_proc,
+        )
+        stage_timings["apply_contrast_aux_to_raw_candidates_sec"] = round(
+            time.perf_counter() - t_candidate_stage, 6
         )
 
     if debug_dump_raw_confidence_features:
@@ -486,6 +493,7 @@ def run_pipeline(
                 warnings.append(f"debug_dump_raw_confidence_features: gt load {ex}")
         try:
             lab_l = roi_lab[:, :, 0].astype(np.float64) if roi_lab is not None else None
+            t_candidate_stage = time.perf_counter()
             annotate_raw_candidates_confidence_dump(
                 raw_cands,
                 raw_mask=morph["raw_candidate_mask"],
@@ -498,6 +506,9 @@ def run_pipeline(
                 roi_lab_l_channel=lab_l,
                 gt_y_by_col=gt_ann,
                 roi_h=roi_h,
+            )
+            stage_timings["annotate_raw_candidates_confidence_dump_sec"] = round(
+                time.perf_counter() - t_candidate_stage, 6
             )
         except Exception as ex:  # pragma: no cover - debug only
             warnings.append(f"debug_dump_raw_confidence_features: annotate {ex}")
@@ -541,6 +552,7 @@ def run_pipeline(
                 except Exception as ex:  # pragma: no cover
                     warnings.append(f"debug_final_selection_reasons: gt load {ex}")
 
+    t_candidate_stage = time.perf_counter()
     filtered_cands = filter_candidates(
         raw_cands,
         min_conf_keep=float(candidate_filter_min_conf_keep),
@@ -568,8 +580,10 @@ def run_pipeline(
         ),
         filter_roi_h=int(roi_h),
     )
+    stage_timings["filter_candidates_sec"] = round(time.perf_counter() - t_candidate_stage, 6)
     sk_y_hint = smooth_hint_y_column(skeleton_column_hint_y(skeleton), half=5)
     candidate_final_debug_accum: Dict[str, Any] = {}
+    t_candidate_stage = time.perf_counter()
     final_pre, missing_cols = build_final_candidates(
         filtered_cands,
         comp_score_map,
@@ -595,8 +609,11 @@ def run_pipeline(
         candidate_final_continuity_window=int(candidate_final_continuity_window),
         candidate_final_continuity_max_jump=int(continuity_max_jump_proc),
     )
+    stage_timings["build_final_candidates_sec"] = round(time.perf_counter() - t_candidate_stage, 6)
     final_cands = final_pre
+    stage_timings["bridge_final_candidates_for_dp_sec"] = 0.0
     if use_dp_candidate_bridge:
+        t_candidate_stage = time.perf_counter()
         final_cands = bridge_final_candidates_for_dp(
             final_pre,
             roi_w,
@@ -606,6 +623,9 @@ def run_pipeline(
             axis_dist,
             skeleton_hint_y=sk_y_hint,
             max_dp_bridge_frac=candidate_final_max_dp_bridge_frac,
+        )
+        stage_timings["bridge_final_candidates_for_dp_sec"] = round(
+            time.perf_counter() - t_candidate_stage, 6
         )
     if (
         debug_final_selection_reasons
@@ -653,7 +673,8 @@ def run_pipeline(
         cand_stats["dp_candidate_bridge"] = False
     if preserve_meta:
         cand_stats.update(preserve_meta)
-    stage_timings["candidates"] = round(time.perf_counter() - t0, 6)
+    stage_timings["candidates_total_sec"] = round(time.perf_counter() - candidates_total_t0, 6)
+    stage_timings["candidates"] = stage_timings["candidates_total_sec"]
 
     # --- Step 13: DP tracing (+ 선택: GT oracle 재랭크 또는 CNN 재랭크 + fallback) ---
     t0 = time.perf_counter()
@@ -1559,6 +1580,7 @@ def run_single(
     운영: v1_1 / v1_2 (동일 엔진, pipeline_version 만 calibrate_v1_1 vs calibrate_v1_2).
     실험: v2_experimental + --allow_experimental_v2 만 허용.
     """
+    total_run_t0 = time.perf_counter()
     image = load_image(image_path)
     mi = load_manual_inputs(manual_inputs_path)
     manual_meta: Dict[str, Any] = {}
@@ -1674,8 +1696,26 @@ def run_single(
             "debug_dir": str(debug_dir),
             "final_export_mode": str(final_export_mode),
         }
+    stage_timings_obj: Optional[Dict[str, Any]] = None
+    if isinstance(debug_data.get("debug.json"), dict):
+        st = debug_data["debug.json"].setdefault("stage_timings", {})
+        if isinstance(st, dict):
+            stage_timings_obj = st
+
+    t_save = time.perf_counter()
     save_result_json(result, output_json_path)
+    if stage_timings_obj is not None:
+        stage_timings_obj["result_export_sec"] = round(time.perf_counter() - t_save, 6)
+
+    t_save = time.perf_counter()
     save_debug_files(debug_data, debug_dir)
+    if stage_timings_obj is not None:
+        stage_timings_obj["debug_dump_sec"] = round(time.perf_counter() - t_save, 6)
+        stage_timings_obj["total_run_sec"] = round(time.perf_counter() - total_run_t0, 6)
+        debug_json_path = Path(debug_dir) / "debug.json"
+        if debug_json_path.is_file():
+            with debug_json_path.open("w", encoding="utf-8") as f:
+                json.dump(debug_data["debug.json"], f, ensure_ascii=False, indent=2)
 
     if pl != "v2_experimental":
         arm = "experiment" if contrast_aux_settings.use_contrast_aux else "baseline"
