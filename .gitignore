@@ -17,14 +17,16 @@ env/
 .idea/
 .vscode/
 
-# Private/local datasets
+# Private/local datasets and research artifacts
 /data/
-/research_plan_outputs/02_dataset/
+/experiments/
+/research_plan_outputs/
+/scripts/
+/tuning/
 
 # Generated outputs and build artifacts
 /outputs/
 /debug_artifacts/
 /dist/
-/experiments/archive/
 *.zip
 *.tar.gz
