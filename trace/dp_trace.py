@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 ALPHA = 1.0
+# Soften |dy| penalty only when the target column's chosen candidate is peak_apex.
+PEAK_APEX_TRANSITION_ALPHA_SCALE = 0.35
 BETA = 0.20
 GAMMA = 0.88
 DELTA = 1.2
@@ -21,6 +23,13 @@ EPSILON = 3.0       # border proximity penalty weight
 BORDER_RADIUS = 12   # penalty decays linearly to zero at this distance
 K_TOP = 3
 BLOCK_SIZE = 50
+
+# === Wide band + trend attraction ===
+TREND_WEIGHT = 0.08
+WIDE_BAND_THICKNESS_RATIO = 0.08
+WIDE_BAND_TOP_CANDIDATE_FRAC = 0.40
+MIN_WIDE_CONSECUTIVE = 60   # 60열 미만 연속 wide band는 sharp peak로 간주해 무시
+MAX_WIDE_FRACTION = 0.30    # roi_width의 30% 이상이 wide면 candidate 노이즈로 판단해 전체 비활성화
 
 
 def refine_dp_path_column_apex_pull(
@@ -89,6 +98,49 @@ def _border_penalty(y: int, roi_height: int) -> float:
     return EPSILON * (1.0 - dist / BORDER_RADIUS)
 
 
+def _compute_wide_band_trend(
+    final_candidates: Dict[int, List[dict]],
+    roi_width: int,
+    roi_height: int,
+    sigma: float = 30.0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Wide band 열 감지 + topmost y smoothed trend."""
+    from scipy.ndimage import gaussian_filter1d
+
+    top_y = np.full(roi_width, np.nan, dtype=np.float64)
+    thickness = np.zeros(roi_width, dtype=np.float64)
+
+    for col in range(roi_width):
+        cands = final_candidates.get(col, [])
+        if not cands:
+            continue
+        ys = [int(c["y"]) for c in cands]
+        top_y[col] = float(min(ys))
+        thickness[col] = float(max(ys) - min(ys))
+
+    wide_mask = thickness > (float(roi_height) * WIDE_BAND_THICKNESS_RATIO)
+    _pre_erosion_count = int(wide_mask.sum())
+
+    # candidate map 전체가 두꺼운 경우(노이즈) → wide_band 비활성화
+    if _pre_erosion_count > roi_width * MAX_WIDE_FRACTION:
+        wide_mask[:] = False
+    else:
+        from scipy.ndimage import binary_erosion
+        struct = np.ones(MIN_WIDE_CONSECUTIVE, dtype=bool)
+        wide_mask = binary_erosion(wide_mask, structure=struct)
+
+
+    idx = np.arange(roi_width, dtype=np.float64)
+    finite = np.isfinite(top_y)
+    filled = (
+        np.interp(idx, idx[finite], top_y[finite])
+        if np.sum(finite) >= 2
+        else np.where(finite, top_y, 0.0)
+    )
+    smoothed = gaussian_filter1d(filled, sigma=float(sigma))
+    return smoothed, wide_mask
+
+
 def _transition_cost_terms(
     y_curr: int,
     y_prev: int,
@@ -101,6 +153,7 @@ def _transition_cost_terms(
     confidence_weight_multiplier: float = 1.0,
     transition_penalty_multiplier: float = 1.0,
     curvature_penalty_multiplier: float = 1.0,
+    is_apex_target: bool = False,
 ) -> Dict[str, float]:
     dy = abs(y_curr - y_prev)
     d2y = abs((y_curr - y_prev) - (y_prev - y_prev2)) if y_prev2 is not None else 0.0
@@ -108,7 +161,8 @@ def _transition_cost_terms(
     comp_switch = 1.0 if abs(comp_score_curr - comp_score_prev) > COMP_SWITCH_THRESH else 0.0
     border_pen = _border_penalty(y_curr, roi_height) if roi_height > 0 else 0.0
 
-    transition_cost = ALPHA * dy * float(transition_penalty_multiplier)
+    a_dy = float(ALPHA) * float(PEAK_APEX_TRANSITION_ALPHA_SCALE) if is_apex_target else float(ALPHA)
+    transition_cost = a_dy * dy * float(transition_penalty_multiplier)
     curvature_cost = BETA * d2y * float(curvature_penalty_multiplier)
     confidence_cost = GAMMA * conf_penalty * float(confidence_weight_multiplier)
     component_switch_cost = DELTA * comp_switch
@@ -138,6 +192,7 @@ def _transition_cost(
     confidence_weight_multiplier: float = 1.0,
     transition_penalty_multiplier: float = 1.0,
     curvature_penalty_multiplier: float = 1.0,
+    is_apex_target: bool = False,
 ) -> float:
     return _transition_cost_terms(
         y_curr,
@@ -150,6 +205,7 @@ def _transition_cost(
         confidence_weight_multiplier=confidence_weight_multiplier,
         transition_penalty_multiplier=transition_penalty_multiplier,
         curvature_penalty_multiplier=curvature_penalty_multiplier,
+        is_apex_target=is_apex_target,
     )["total"]
 
 
@@ -168,6 +224,9 @@ def dp_trace(
     Returns dict with: path, trace_score, valid_ratio, diagnostics, blockwise stats.
     """
     W = _compute_window(roi_width)
+    trend_top_y, wide_mask = _compute_wide_band_trend(
+        final_candidates, roi_width, roi_height, sigma=30.0
+    )
     columns = sorted(final_candidates.keys())
     if not columns:
         return _empty_result(roi_width)
@@ -188,15 +247,29 @@ def dp_trace(
         if not cands:
             continue
 
-        for c in cands:
+        # wide band: topmost 후보만
+        active_cands = cands
+        if col < roi_width and wide_mask[col]:
+            ys_sorted = sorted(cands, key=lambda c: int(c["y"]))
+            n_keep = max(3, int(len(ys_sorted) * WIDE_BAND_TOP_CANDIDATE_FRAC))
+            active_cands = ys_sorted[:n_keep]
+
+        for c in active_cands:
             y = c["y"]
             conf = c["confidence"]
             cs = c.get("comp_score", 0.0)
+            is_apex = str(c.get("source", "")) == "peak_apex"
+
+            # trend attraction (wide band에서만)
+            trend_cost = 0.0
+            if col < roi_width and wide_mask[col]:
+                trend_cost = TREND_WEIGHT * abs(float(y) - float(trend_top_y[col]))
 
             if ci == 0 or not dp.get(columns[ci - 1]):
                 cost = (
                     GAMMA * float(confidence_weight_multiplier) * (1.0 - conf)
                     + _border_penalty(y, roi_height)
+                    + trend_cost
                 )
                 dp[col][y] = {
                     "cost": cost,
@@ -227,8 +300,9 @@ def dp_trace(
                     confidence_weight_multiplier=confidence_weight_multiplier,
                     transition_penalty_multiplier=transition_penalty_multiplier,
                     curvature_penalty_multiplier=curvature_penalty_multiplier,
+                    is_apex_target=is_apex,
                 )
-                total = pdata["cost"] + tc
+                total = pdata["cost"] + tc + trend_cost
 
                 if total < best_cost:
                     best_cost = total
@@ -244,10 +318,12 @@ def dp_trace(
             if best_entry is None:
                 nearest_py = min(dp[prev_col], key=lambda k: dp[prev_col][k]["cost"])
                 pdata_nearest = dp[prev_col][nearest_py]
+                a_dy = ALPHA * PEAK_APEX_TRANSITION_ALPHA_SCALE if is_apex else ALPHA
                 cost = (
                     pdata_nearest["cost"]
                     + GAMMA * float(confidence_weight_multiplier) * (1.0 - conf)
-                    + ALPHA * float(transition_penalty_multiplier) * abs(y - nearest_py)
+                    + a_dy * float(transition_penalty_multiplier) * abs(y - nearest_py)
+                    + trend_cost
                 )
                 best_entry = {
                     "cost": cost,
@@ -284,6 +360,7 @@ def dp_trace(
         "window_W": W,
         "cost_params": {
             "alpha_dy": float(ALPHA),
+            "peak_apex_transition_alpha_scale": float(PEAK_APEX_TRANSITION_ALPHA_SCALE),
             "beta_curvature": float(BETA),
             "gamma_confidence": float(GAMMA),
             "delta_component_switch": float(DELTA),
@@ -378,6 +455,7 @@ def _candidate_terms_from_prev(
     y = int(cand.get("y", 0))
     conf = float(cand.get("confidence", 0.0))
     cs = float(cand.get("comp_score", 0.0))
+    is_apex = str(cand.get("source", "")) == "peak_apex"
     if prev_y is None:
         return {
             "dy_abs": None,
@@ -401,6 +479,7 @@ def _candidate_terms_from_prev(
         confidence_weight_multiplier=confidence_weight_multiplier,
         transition_penalty_multiplier=transition_penalty_multiplier,
         curvature_penalty_multiplier=curvature_penalty_multiplier,
+        is_apex_target=is_apex,
     )
     return {k: round(float(v), 6) for k, v in terms.items()}
 
@@ -565,6 +644,7 @@ def build_dp_cost_breakdown(
         "upper_band_y_threshold": round(float(upper_y), 4),
         "cost_params": {
             "alpha_dy": float(ALPHA),
+            "peak_apex_transition_alpha_scale": float(PEAK_APEX_TRANSITION_ALPHA_SCALE),
             "beta_curvature": float(BETA),
             "gamma_confidence": float(GAMMA),
             "delta_component_switch": float(DELTA),
