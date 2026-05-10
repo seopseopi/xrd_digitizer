@@ -502,7 +502,7 @@ def run_pipeline(
     stage_timings["masks"] = round(time.perf_counter() - t0, 6)
 
     t0 = time.perf_counter()
-    morph = run_morphology_pipeline(combined)
+    morph = run_morphology_pipeline(combined, upscale_factor=roi_up_factor)
     amargin = max(1, _scale_px_int(int(axis_mask_margin), roi_up_factor))
     morph["cleaned_mask"] = mask_axis_lines(morph["cleaned_mask"], margin=amargin)
     morph["raw_candidate_mask"] = mask_axis_lines(morph["raw_candidate_mask"], margin=amargin)

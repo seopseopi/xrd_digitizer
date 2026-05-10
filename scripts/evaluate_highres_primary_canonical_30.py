@@ -504,6 +504,13 @@ def main() -> None:
     ap.add_argument("--mask-b-mag-percentile", type=float, default=50.0)
     ap.add_argument("--mask-b-thr-clip-lo", type=float, default=10.0)
     ap.add_argument("--mask-b-thr-clip-hi", type=float, default=40.0)
+    ap.add_argument(
+        "--sample-keys",
+        nargs="+",
+        default=None,
+        metavar="TEST_ID",
+        help="Run only these manifest test_id values (smoke / subset); full manifest must still validate",
+    )
     args = ap.parse_args()
 
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
@@ -519,6 +526,18 @@ def main() -> None:
         write_csv(failures_path, manifest_failures, sorted(set().union(*(r.keys() for r in manifest_failures))))
         print(f"[manifest validation failed] wrote {rel(failures_path)}", file=sys.stderr)
         raise SystemExit(1)
+
+    canonical_valid_row_count = len(valid_rows)
+    sample_keys_filter: Optional[List[str]] = None
+    if args.sample_keys:
+        want = list(dict.fromkeys(args.sample_keys))
+        by_tid = {r.get("test_id"): r for r in valid_rows}
+        missing = [k for k in want if k not in by_tid]
+        if missing:
+            print(f"[--sample-keys] not in valid manifest rows: {missing}", file=sys.stderr)
+            raise SystemExit(1)
+        valid_rows = [by_tid[k] for k in want]
+        sample_keys_filter = want
 
     results: List[Dict[str, Any]] = []
 
@@ -580,7 +599,8 @@ def main() -> None:
         "canonical_root": rel(CANONICAL_ROOT),
         "manifest": rel(manifest),
         "manifest_validation": {
-            "row_count": len(valid_rows),
+            "row_count": canonical_valid_row_count,
+            "rows_run": len(results),
             "domain_counts": domain_counts,
             "pattern_1915_present": False,
             "clean_pattern_11832_present": True,
@@ -598,6 +618,7 @@ def main() -> None:
             "mask_b_mag_percentile": float(args.mask_b_mag_percentile),
             "mask_b_thr_clip_lo": float(args.mask_b_thr_clip_lo),
             "mask_b_thr_clip_hi": float(args.mask_b_thr_clip_hi),
+            "sample_keys": sample_keys_filter,
         },
         "totals": totals,
         "domain_summary": domain_summary,
@@ -647,13 +668,18 @@ def main() -> None:
         "| domain | n | improved | worsened | mean baseline MAE | mean highres MAE | mean delta | mean delta corr |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
+    def _md_mean_cell(v: Any) -> str:
+        if v == "" or v is None:
+            return "—"
+        return f"{float(v):.6f}"
+
     for r in domain_summary:
         md.append(
             f"| {r['domain']} | {r['sample_count']} | {r['improved_count']} | {r['worsened_count']} | "
-            f"{float(r['mean_baseline_normalized_y_mae']):.6f} | "
-            f"{float(r['mean_highres_normalized_y_mae']):.6f} | "
-            f"{float(r['mean_delta_normalized_y_mae']):.6f} | "
-            f"{float(r['mean_delta_shape_correlation']):.6f} |"
+            f"{_md_mean_cell(r['mean_baseline_normalized_y_mae'])} | "
+            f"{_md_mean_cell(r['mean_highres_normalized_y_mae'])} | "
+            f"{_md_mean_cell(r['mean_delta_normalized_y_mae'])} | "
+            f"{_md_mean_cell(r['mean_delta_shape_correlation'])} |"
         )
     md.extend(["", "## Worsened / Failure Samples"])
     if failure_rows:

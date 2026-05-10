@@ -2,7 +2,7 @@
 $11.7-11.8: morphology, raw candidate preservation, thinning.
 
 - close kernel 3x3, iter 1
-- area < 80 제거
+- 기본 min_area(픽셀) 미만 CC 제거; ROI 업스케일 시 면적 스케일에 맞춤
 - raw candidate mask 별도 저장 (thinning 전)
 - thinning은 후보 정제 수단이지 유일한 원천이 아님
 """
@@ -66,7 +66,11 @@ def _fallback_thinning(mask: np.ndarray) -> np.ndarray:
     return current.astype(np.uint8)
 
 
-def run_morphology_pipeline(combined_mask: np.ndarray) -> dict:
+def run_morphology_pipeline(
+    combined_mask: np.ndarray,
+    min_area: int = 68,
+    upscale_factor: int = 1,
+) -> dict:
     """
     전처리 morphology 전체 파이프라인.
     Returns dict with: raw_candidate_mask, cleaned_mask, skeleton_mask
@@ -74,7 +78,9 @@ def run_morphology_pipeline(combined_mask: np.ndarray) -> dict:
     raw_candidates = save_raw_candidates(combined_mask)
 
     closed = apply_morphology_close(combined_mask)
-    cleaned = remove_small_components(closed)
+    uf = max(1, int(upscale_factor))
+    scaled_min_area = int(min_area) * (uf * uf)
+    cleaned = remove_small_components(closed, min_area=scaled_min_area)
 
     skeleton = apply_thinning(cleaned)
 
