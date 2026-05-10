@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate ROI 2x highres as primary output against source_numeric on canonical 3-domain samples."""
+"""Evaluate ROI 2× highres (primary performance baseline) vs source_numeric on canonical 3-domain samples."""
 
 from __future__ import annotations
 

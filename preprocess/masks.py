@@ -29,11 +29,20 @@ def build_mask_a(
     return (color_distance_map < threshold).astype(np.uint8)
 
 
-def build_mask_b(roi: np.ndarray, edge_threshold: Optional[float] = None) -> np.ndarray:
+def build_mask_b(
+    roi: np.ndarray,
+    edge_threshold: Optional[float] = None,
+    *,
+    mag_percentile: float = 70.0,
+    mag_thr_clip_lo: float = 18.0,
+    mag_thr_clip_hi: float = 48.0,
+) -> np.ndarray:
     """edge/gradient mask from grayscale Sobel magnitude.
 
     edge_threshold 가 None 이면: Step 1b 명도 스트레치 후 Step 1a 적응형 임계값.
     고정 임계값만 쓰려면 예: build_mask_b(roi, 30.0) — 이 경우 스트레치 생략(기존 동작).
+
+    mag_percentile / mag_thr_clip_* 는 edge_threshold 가 None 일 때만 사용 (저대비 ROI 튜닝용).
     """
     if roi.ndim == 3:
         gray = np.mean(roi.astype(np.float64), axis=2)
@@ -50,8 +59,13 @@ def build_mask_b(roi: np.ndarray, edge_threshold: Optional[float] = None) -> np.
     if edge_threshold is not None:
         thr = float(edge_threshold)
     else:
-        p70 = float(np.percentile(mag, 70.0))
-        thr = float(np.clip(p70, 18.0, 48.0))
+        pct = float(np.clip(mag_percentile, 1.0, 99.0))
+        p = float(np.percentile(mag, pct))
+        lo = float(mag_thr_clip_lo)
+        hi = float(mag_thr_clip_hi)
+        if hi < lo:
+            lo, hi = hi, lo
+        thr = float(np.clip(p, lo, hi))
 
     return (mag > thr).astype(np.uint8)
 

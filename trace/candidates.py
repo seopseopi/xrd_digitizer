@@ -477,6 +477,736 @@ def build_raw_candidates(
     return raw_candidates
 
 
+def _rolling_nanmedian_1d(x: np.ndarray, window: int) -> np.ndarray:
+    w = max(3, int(window))
+    if w % 2 == 0:
+        w += 1
+    r = w // 2
+    out = np.full(x.shape, np.nan, dtype=np.float64)
+    for i in range(int(x.size)):
+        lo = max(0, i - r)
+        hi = min(int(x.size), i + r + 1)
+        seg = x[lo:hi]
+        seg = seg[np.isfinite(seg)]
+        if seg.size:
+            out[i] = float(np.median(seg))
+    return out
+
+
+def _fill_nan_linear_1d(x: np.ndarray) -> np.ndarray:
+    idx = np.arange(int(x.size), dtype=np.float64)
+    mask = np.isfinite(x)
+    if not np.any(mask):
+        return np.zeros_like(x, dtype=np.float64)
+    if int(np.sum(mask)) == 1:
+        return np.full_like(x, float(x[mask][0]), dtype=np.float64)
+    return np.interp(idx, idx[mask], x[mask]).astype(np.float64, copy=False)
+
+
+def _band_midline_ranges(cols: List[int]) -> List[List[int]]:
+    if not cols:
+        return []
+    cols_sorted = sorted(set(int(c) for c in cols))
+    ranges: List[List[int]] = []
+    start = prev = cols_sorted[0]
+    for c in cols_sorted[1:]:
+        if c == prev + 1:
+            prev = c
+            continue
+        ranges.append([int(start), int(prev)])
+        start = prev = c
+    ranges.append([int(start), int(prev)])
+    return ranges
+
+
+def _peak_apex_double_tip_flags(
+    y_top: np.ndarray,
+    peak_mask: np.ndarray,
+    thickness: np.ndarray,
+    *,
+    max_tip_distance: int,
+) -> Dict[str, Any]:
+    """Flag likely false double-tip windows without merging or using GT."""
+    n = int(y_top.size)
+    if n < 5:
+        return {
+            "false_double_tip_mask": np.zeros(n, dtype=bool),
+            "true_doublet_possible_mask": np.zeros(n, dtype=bool),
+            "false_double_tip_ranges": [],
+            "true_doublet_possible_ranges": [],
+            "pairs": [],
+        }
+    smooth = _fill_nan_linear_1d(y_top)
+    local_min = np.zeros(n, dtype=bool)
+    local_min[1:-1] = (
+        np.isfinite(y_top[1:-1])
+        & (smooth[1:-1] <= smooth[:-2])
+        & (smooth[1:-1] <= smooth[2:])
+        & peak_mask[1:-1]
+    )
+    mins = np.nonzero(local_min)[0].astype(int).tolist()
+    false_mask = np.zeros(n, dtype=bool)
+    true_mask = np.zeros(n, dtype=bool)
+    pairs: List[Dict[str, Any]] = []
+    max_dist = max(3, int(max_tip_distance))
+    for i, left in enumerate(mins):
+        for right in mins[i + 1 :]:
+            dist = int(right - left)
+            if dist <= 1:
+                continue
+            if dist > max_dist:
+                break
+            seg = smooth[left : right + 1]
+            if seg.size == 0 or not np.any(np.isfinite(seg)):
+                continue
+            valley_y = float(np.nanmax(seg))
+            tip_y = float(min(smooth[left], smooth[right]))
+            valley_depth_px = valley_y - tip_y
+            thick_seg = thickness[left : right + 1]
+            thick_seg = thick_seg[np.isfinite(thick_seg)]
+            thick_ref = float(np.median(thick_seg)) if thick_seg.size else 0.0
+            shallow_thr = max(4.0, 0.18 * thick_ref)
+            is_false_like = valley_depth_px <= shallow_thr
+            if is_false_like:
+                false_mask[left : right + 1] = True
+            else:
+                true_mask[left : right + 1] = True
+            pairs.append(
+                {
+                    "left_col": int(left),
+                    "right_col": int(right),
+                    "tip_distance_cols": int(dist),
+                    "valley_depth_px": float(valley_depth_px),
+                    "thickness_ref_px": float(thick_ref),
+                    "classification": (
+                        "FALSE_DOUBLE_TIP_ARTIFACT_LIKELY"
+                        if is_false_like
+                        else "TRUE_DOUBLET_POSSIBLE"
+                    ),
+                }
+            )
+    return {
+        "false_double_tip_mask": false_mask,
+        "true_doublet_possible_mask": true_mask,
+        "false_double_tip_ranges": _band_midline_ranges(np.nonzero(false_mask)[0].astype(int).tolist()),
+        "true_doublet_possible_ranges": _band_midline_ranges(np.nonzero(true_mask)[0].astype(int).tolist()),
+        "pairs": pairs[:256],
+    }
+
+
+def _peak_apex_evidence_features(
+    raw_candidate_mask: np.ndarray,
+    *,
+    window: int,
+    top_percentile: float,
+    min_prominence: float,
+    min_evidence_pixels: int,
+    min_top_support: int,
+) -> Dict[str, Any]:
+    h, w = raw_candidate_mask.shape[:2]
+    radius = max(0, int(window) // 2)
+    top_pct = float(np.clip(float(top_percentile), 0.0, 50.0))
+    y_top = np.full(int(w), np.nan, dtype=np.float64)
+    y_bottom = np.full(int(w), np.nan, dtype=np.float64)
+    thickness = np.full(int(w), np.nan, dtype=np.float64)
+    evidence_counts = np.zeros(int(w), dtype=np.int64)
+    top_support = np.zeros(int(w), dtype=np.int64)
+    for col in range(int(w)):
+        lo = max(0, col - radius)
+        hi = min(int(w), col + radius + 1)
+        ys = np.nonzero(raw_candidate_mask[:, lo:hi] > 0)[0]
+        evidence_counts[col] = int(ys.size)
+        if ys.size == 0:
+            continue
+        ys_f = ys.astype(np.float64, copy=False)
+        yt = float(np.percentile(ys_f, top_pct))
+        yb = float(np.percentile(ys_f, 80.0))
+        y_top[col] = yt
+        y_bottom[col] = yb
+        thickness[col] = yb - yt
+        top_support[col] = int(np.sum(ys_f <= yt + 2.0))
+    smooth_top = _fill_nan_linear_1d(y_top)
+    trend_top = _rolling_nanmedian_1d(smooth_top, max(31, int(window) * 9))
+    prominence = trend_top - smooth_top
+    slope = np.gradient(smooth_top) if int(w) > 1 else np.zeros_like(smooth_top)
+    curvature = np.gradient(slope) if int(w) > 1 else np.zeros_like(smooth_top)
+    peak_mask = (
+        np.isfinite(y_top)
+        & (evidence_counts >= int(min_evidence_pixels))
+        & (top_support >= int(min_top_support))
+        & (prominence >= float(min_prominence))
+        & (thickness >= 2.0)
+    )
+    edge = max(3, int(window))
+    if int(w) > 2 * edge:
+        peak_mask[:edge] = False
+        peak_mask[-edge:] = False
+    return {
+        "y_top": y_top,
+        "y_bottom": y_bottom,
+        "thickness": thickness,
+        "evidence_counts": evidence_counts,
+        "top_support": top_support,
+        "smooth_top": smooth_top,
+        "prominence": prominence,
+        "slope": slope,
+        "curvature": curvature,
+        "peak_mask": peak_mask,
+        "height": int(h),
+        "width": int(w),
+    }
+
+
+def add_peak_apex_candidates_to_raw(
+    raw_candidates: Dict[int, List[dict]],
+    raw_candidate_mask: np.ndarray,
+    color_dist_map: np.ndarray,
+    comp_score_map: np.ndarray,
+    axis_dist_map: np.ndarray,
+    *,
+    window: int = 9,
+    top_percentile: float = 10.0,
+    min_prominence: float = 8.0,
+    min_evidence_pixels: int = 5,
+    min_top_support: int = 2,
+    max_extra_per_column: int = 1,
+    double_tip_guard: bool = True,
+) -> Tuple[Dict[int, List[dict]], Dict[str, Any]]:
+    """Add optional sharp-peak top-envelope candidates to raw candidates."""
+    h, w = raw_candidate_mask.shape[:2]
+    feat = _peak_apex_evidence_features(
+        raw_candidate_mask,
+        window=int(window),
+        top_percentile=float(top_percentile),
+        min_prominence=float(min_prominence),
+        min_evidence_pixels=int(min_evidence_pixels),
+        min_top_support=int(min_top_support),
+    )
+    double_tip = _peak_apex_double_tip_flags(
+        feat["y_top"],
+        feat["peak_mask"],
+        feat["thickness"],
+        max_tip_distance=max(6, int(window) * 4),
+    )
+    false_double_mask = double_tip["false_double_tip_mask"]
+    reason_counts: Counter[str] = Counter()
+    added_cols: List[int] = []
+    peak_window_cols = np.nonzero(feat["peak_mask"])[0].astype(int).tolist()
+    for col in range(int(w)):
+        if not bool(feat["peak_mask"][col]):
+            reason_counts["skipped_not_peak_window"] += 1
+            continue
+        if bool(double_tip_guard) and bool(false_double_mask[col]):
+            reason_counts["skipped_double_tip_guard"] += 1
+            continue
+        if int(max_extra_per_column) <= 0:
+            reason_counts["skipped_max_extra_zero"] += 1
+            continue
+        yt = feat["y_top"][col]
+        if not np.isfinite(yt):
+            reason_counts["skipped_invalid_top"] += 1
+            continue
+        y = int(round(float(yt)))
+        if y < 0 or y >= int(h):
+            reason_counts["skipped_out_of_bounds"] += 1
+            continue
+        current = raw_candidates.setdefault(int(col), [])
+        if any(str(c.get("source", "")) == "peak_apex" for c in current):
+            reason_counts["skipped_max_extra_per_column"] += 1
+            continue
+        if any(abs(int(c.get("y", -10**9)) - y) <= 1 for c in current):
+            reason_counts["skipped_duplicate_y"] += 1
+            continue
+        nearest = min(current, key=lambda c: abs(int(c.get("y", -10**9)) - y)) if current else None
+        conf = max(0.35, float(nearest.get("confidence", 0.0))) if nearest is not None else 0.35
+        conf = float(np.clip(conf, 0.0, 0.95))
+        cand = {
+            "y": int(y),
+            "confidence": conf,
+            "color_dist": float(color_dist_map[y, col]),
+            "comp_score": float(comp_score_map[y, col]),
+            "axis_dist": float(axis_dist_map[y, col]),
+            "source": "peak_apex",
+            "reason": "peak_top_envelope_candidate",
+            "peak_apex": True,
+            "peak_apex_window": True,
+            "peak_apex_false_double_tip_flag": bool(false_double_mask[col]),
+            "peak_apex_true_doublet_possible_flag": bool(double_tip["true_doublet_possible_mask"][col]),
+            "peak_apex_y_top_robust": float(feat["y_top"][col]),
+            "peak_apex_y_bottom_robust": float(feat["y_bottom"][col]),
+            "peak_apex_band_thickness": float(feat["thickness"][col]),
+            "peak_apex_evidence_pixels": int(feat["evidence_counts"][col]),
+            "peak_apex_top_support": int(feat["top_support"][col]),
+            "peak_apex_prominence": float(feat["prominence"][col]),
+            "peak_apex_slope": float(feat["slope"][col]),
+            "peak_apex_curvature": float(feat["curvature"][col]),
+        }
+        current.append(cand)
+        current.sort(key=lambda c: -float(c.get("confidence", 0.0)))
+        reason_counts["added"] += 1
+        added_cols.append(int(col))
+    prom = feat["prominence"][np.isfinite(feat["prominence"])]
+    return raw_candidates, {
+        "enabled": True,
+        "uses_gt": False,
+        "uses_source_numeric": False,
+        "source": "peak_apex",
+        "reason": "peak_top_envelope_candidate",
+        "params": {
+            "window": int(window),
+            "top_percentile": float(top_percentile),
+            "min_prominence": float(min_prominence),
+            "min_evidence_pixels": int(min_evidence_pixels),
+            "min_top_support": int(min_top_support),
+            "max_extra_per_column": int(max_extra_per_column),
+            "double_tip_guard": bool(double_tip_guard),
+        },
+        "peak_window_count": int(len(peak_window_cols)),
+        "peak_window_ranges": _band_midline_ranges(peak_window_cols),
+        "added_candidate_count": int(reason_counts.get("added", 0)),
+        "added_columns": int(len(added_cols)),
+        "added_column_ranges": _band_midline_ranges(added_cols),
+        "preserved_final_count": 0,
+        "preserved_columns": 0,
+        "preserved_column_ranges": [],
+        "selected_columns": 0,
+        "selected_column_ranges": [],
+        "selected_source_distribution": {},
+        "false_double_tip_flags": {
+            "guard_enabled": bool(double_tip_guard),
+            "false_double_tip_columns": int(np.sum(false_double_mask)),
+            "false_double_tip_ranges": double_tip["false_double_tip_ranges"],
+            "true_doublet_possible_columns": int(np.sum(double_tip["true_doublet_possible_mask"])),
+            "true_doublet_possible_ranges": double_tip["true_doublet_possible_ranges"],
+            "pairs": double_tip["pairs"],
+        },
+        "skip_reason_counts": dict(sorted(reason_counts.items())),
+        "apex_prominence_summary": {
+            "mean": float(np.mean(prom)) if prom.size else None,
+            "median": float(np.median(prom)) if prom.size else None,
+            "p90": float(np.percentile(prom, 90.0)) if prom.size else None,
+        },
+        "apex_reach_gap_before_summary": None,
+        "apex_reach_gap_after_summary": None,
+    }
+
+
+def preserve_peak_apex_final_candidates(
+    final_candidates: Dict[int, List[dict]],
+    raw_candidates: Dict[int, List[dict]],
+    *,
+    max_extra_per_column: int = 1,
+    double_tip_guard: bool = True,
+) -> Tuple[Dict[int, List[dict]], Dict[str, Any]]:
+    """Preserve at most one peak_apex candidate per final DP column."""
+    reason_counts: Counter[str] = Counter()
+    preserved_cols: List[int] = []
+    for col, raw_col in raw_candidates.items():
+        peak_raw = [c for c in raw_col if str(c.get("source", "")) == "peak_apex"]
+        if not peak_raw:
+            continue
+        if bool(double_tip_guard) and any(bool(c.get("peak_apex_false_double_tip_flag")) for c in peak_raw):
+            reason_counts["skipped_double_tip_guard"] += 1
+            continue
+        current = final_candidates.setdefault(int(col), [])
+        if any(str(c.get("source", "")) == "peak_apex" for c in current):
+            reason_counts["already_in_final"] += 1
+            continue
+        if int(max_extra_per_column) <= 0:
+            reason_counts["skipped_max_extra_zero"] += 1
+            continue
+        best = max(
+            peak_raw,
+            key=lambda c: (
+                float(c.get("confidence", 0.0)),
+                float(c.get("peak_apex_prominence", 0.0)),
+            ),
+        )
+        y = int(best.get("y", -10**9))
+        if any(abs(int(c.get("y", -10**9)) - y) <= 1 for c in current):
+            reason_counts["duplicate_y_in_final"] += 1
+            continue
+        current.append(dict(best))
+        reason_counts["preserved"] += 1
+        preserved_cols.append(int(col))
+    return final_candidates, {
+        "preserved_final_count": int(reason_counts.get("preserved", 0)),
+        "preserved_columns": int(len(preserved_cols)),
+        "preserved_column_ranges": _band_midline_ranges(preserved_cols),
+        "preserve_reason_counts": dict(sorted(reason_counts.items())),
+    }
+
+
+def _band_midline_peak_guard_mask(
+    y_top: np.ndarray,
+    *,
+    guard_enabled: bool,
+) -> Tuple[np.ndarray, Dict[str, float]]:
+    n = int(y_top.size)
+    if not guard_enabled or n == 0:
+        return np.zeros(n, dtype=bool), {"enabled": float(bool(guard_enabled))}
+
+    filled = _fill_nan_linear_1d(y_top)
+    smooth = _rolling_nanmedian_1d(filled, 9)
+    trend = _rolling_nanmedian_1d(smooth, 81)
+    prominence = trend - smooth
+    slope = np.gradient(smooth)
+    curvature = np.gradient(slope)
+
+    prom_vals = prominence[np.isfinite(prominence) & (prominence > 0)]
+    slope_vals = np.abs(slope[np.isfinite(slope)])
+    curv_vals = np.abs(curvature[np.isfinite(curvature)])
+
+    prom_thr = max(
+        12.0,
+        float(np.percentile(prom_vals, 85.0)) if prom_vals.size else 12.0,
+    )
+    prom_strong_thr = max(
+        24.0,
+        float(np.percentile(prom_vals, 92.0)) if prom_vals.size else 24.0,
+    )
+    slope_low_thr = max(
+        1.5,
+        float(np.percentile(slope_vals, 55.0)) if slope_vals.size else 1.5,
+    )
+    curv_thr = max(
+        1.5,
+        float(np.percentile(curv_vals, 90.0)) if curv_vals.size else 1.5,
+    )
+
+    apex = (
+        (prominence >= prom_thr) & (np.abs(slope) <= slope_low_thr)
+    ) | (
+        (prominence >= prom_strong_thr) & (np.abs(curvature) >= curv_thr)
+    )
+    apex = np.asarray(apex, dtype=bool)
+
+    # Small dilation protects the immediate apex neighborhood without turning
+    # broad peak slopes into a global midline ban.
+    if n > 2 and np.any(apex):
+        dil = apex.copy()
+        dil[1:] |= apex[:-1]
+        dil[:-1] |= apex[1:]
+        apex = dil
+
+    return apex, {
+        "enabled": 1.0,
+        "prominence_threshold_px": float(prom_thr),
+        "strong_prominence_threshold_px": float(prom_strong_thr),
+        "slope_low_threshold_px": float(slope_low_thr),
+        "curvature_threshold_px": float(curv_thr),
+        "guarded_columns": int(np.sum(apex)),
+        "guarded_column_ranges": _band_midline_ranges(np.nonzero(apex)[0].astype(int).tolist()),
+    }
+
+
+def add_band_midline_candidates(
+    final_candidates: Dict[int, List[dict]],
+    raw_candidate_mask: np.ndarray,
+    raw_candidates: Dict[int, List[dict]],
+    color_dist_map: np.ndarray,
+    comp_score_map: np.ndarray,
+    axis_dist_map: np.ndarray,
+    *,
+    window: int = 3,
+    top_percentile: float = 20.0,
+    bottom_percentile: float = 80.0,
+    min_thickness: float = 3.0,
+    max_thickness: float = 120.0,
+    max_extra_per_column: int = 1,
+    peak_guard: bool = True,
+    min_evidence_pixels: int = 3,
+    duplicate_y_px: int = 1,
+    strict_peak_guard: bool = False,
+    peak_guard_curvature_thresh: Optional[float] = None,
+    peak_guard_slope_thresh: Optional[float] = None,
+    peak_guard_prominence_thresh: Optional[float] = None,
+    low_priority_mode: bool = False,
+    confidence_multiplier: float = 1.0,
+    score_penalty: float = 0.0,
+    flat_tail_only: bool = False,
+    require_thick_band: bool = False,
+    min_band_thickness_for_flat_tail: float = 8.0,
+) -> Tuple[Dict[int, List[dict]], Dict[str, Any]]:
+    """Add optional stroke-band midline candidates to final DP candidates.
+
+    This is an experimental, GT-free candidate addition. Existing candidates are
+    never removed. The source_numeric/GT path is intentionally not accepted here.
+    """
+    h, w = raw_candidate_mask.shape[:2]
+    radius = max(0, int(window) // 2)
+    top_pct = float(np.clip(float(top_percentile), 0.0, 100.0))
+    bottom_pct = float(np.clip(float(bottom_percentile), 0.0, 100.0))
+    if bottom_pct < top_pct:
+        top_pct, bottom_pct = bottom_pct, top_pct
+
+    y_top = np.full(int(w), np.nan, dtype=np.float64)
+    y_bottom = np.full(int(w), np.nan, dtype=np.float64)
+    y_mid = np.full(int(w), np.nan, dtype=np.float64)
+    thickness = np.full(int(w), np.nan, dtype=np.float64)
+    evidence_counts = np.zeros(int(w), dtype=np.int64)
+
+    for col in range(int(w)):
+        lo = max(0, col - radius)
+        hi = min(int(w), col + radius + 1)
+        ys = np.nonzero(raw_candidate_mask[:, lo:hi] > 0)[0]
+        evidence_counts[col] = int(ys.size)
+        if ys.size == 0:
+            continue
+        ys_f = ys.astype(np.float64, copy=False)
+        yt = float(np.percentile(ys_f, top_pct))
+        yb = float(np.percentile(ys_f, bottom_pct))
+        y_top[col] = yt
+        y_bottom[col] = yb
+        y_mid[col] = 0.5 * (yt + yb)
+        thickness[col] = yb - yt
+
+    peak_mask, peak_meta = _band_midline_peak_guard_mask(
+        y_top,
+        guard_enabled=bool(peak_guard),
+    )
+    smooth_top = _fill_nan_linear_1d(y_top)
+    trend_top = _rolling_nanmedian_1d(smooth_top, 61)
+    prominence = trend_top - smooth_top
+    slope = np.gradient(smooth_top) if int(w) > 1 else np.zeros_like(smooth_top)
+    curvature = np.gradient(slope) if int(w) > 1 else np.zeros_like(smooth_top)
+    finite_prom = prominence[np.isfinite(prominence)]
+    finite_slope = np.abs(slope[np.isfinite(slope)])
+    finite_curv = np.abs(curvature[np.isfinite(curvature)])
+    prom_thr = (
+        float(peak_guard_prominence_thresh)
+        if peak_guard_prominence_thresh is not None
+        else (float(np.percentile(finite_prom, 72.0)) if finite_prom.size else 12.0)
+    )
+    slope_thr = (
+        float(peak_guard_slope_thresh)
+        if peak_guard_slope_thresh is not None
+        else (float(np.percentile(finite_slope, 62.0)) if finite_slope.size else 1.5)
+    )
+    curv_thr = (
+        float(peak_guard_curvature_thresh)
+        if peak_guard_curvature_thresh is not None
+        else (float(np.percentile(finite_curv, 78.0)) if finite_curv.size else 1.5)
+    )
+    strict_mask = np.zeros(int(w), dtype=bool)
+    if bool(strict_peak_guard):
+        strict_mask = (
+            peak_mask
+            | ((prominence >= prom_thr) & (np.abs(slope) >= slope_thr))
+            | ((prominence >= prom_thr) & (np.abs(curvature) >= curv_thr))
+        )
+        if np.any(strict_mask):
+            dil = strict_mask.copy()
+            for _ in range(3):
+                dil[1:] |= strict_mask[:-1]
+                dil[:-1] |= strict_mask[1:]
+                strict_mask = dil.copy()
+    effective_peak_mask = peak_mask | strict_mask
+
+    flat_prom_thr = float(np.percentile(finite_prom, 58.0)) if finite_prom.size else 0.0
+    flat_slope_thr = float(np.percentile(finite_slope, 55.0)) if finite_slope.size else 1.0
+    flat_curv_thr = float(np.percentile(finite_curv, 62.0)) if finite_curv.size else 1.0
+    flat_tail_mask = (
+        np.isfinite(thickness)
+        & (prominence <= flat_prom_thr)
+        & (np.abs(slope) <= flat_slope_thr)
+        & (np.abs(curvature) <= flat_curv_thr)
+    )
+    if bool(require_thick_band) or bool(flat_tail_only):
+        flat_tail_mask &= thickness >= float(min_band_thickness_for_flat_tail)
+
+    reason_counts: Counter[str] = Counter()
+    added_columns: List[int] = []
+    added_thicknesses: List[float] = []
+    added_confidences: List[float] = []
+    considered = 0
+
+    for col in range(int(w)):
+        considered += 1
+        if int(max_extra_per_column) <= 0:
+            reason_counts["skipped_max_extra_zero"] += 1
+            continue
+        if evidence_counts[col] < int(min_evidence_pixels):
+            reason_counts["skipped_sparse_evidence"] += 1
+            continue
+        if not np.isfinite(y_mid[col]) or not np.isfinite(thickness[col]):
+            reason_counts["skipped_invalid_band"] += 1
+            continue
+        bt = float(thickness[col])
+        if bt < float(min_thickness):
+            reason_counts["skipped_thin_band"] += 1
+            continue
+        if bt > float(max_thickness):
+            reason_counts["skipped_too_thick_band"] += 1
+            continue
+        if bool(effective_peak_mask[col]):
+            reason_counts["skipped_peak_guard"] += 1
+            continue
+        if bool(flat_tail_only) and not bool(flat_tail_mask[col]):
+            reason_counts["skipped_flat_tail_guard"] += 1
+            continue
+
+        y = int(round(float(y_mid[col])))
+        if y < 0 or y >= int(h):
+            reason_counts["skipped_out_of_bounds"] += 1
+            continue
+
+        current = final_candidates.setdefault(int(col), [])
+        if any(abs(int(c.get("y", -10**9)) - y) <= int(duplicate_y_px) for c in current):
+            reason_counts["skipped_duplicate_y"] += 1
+            continue
+
+        existing_band = [
+            c for c in current if str(c.get("source", "")) == "band_midline"
+        ]
+        if len(existing_band) >= int(max_extra_per_column):
+            reason_counts["skipped_max_extra_per_column"] += 1
+            continue
+
+        raw_col = raw_candidates.get(int(col)) or []
+        nearest = None
+        if raw_col:
+            nearest = min(raw_col, key=lambda c: abs(int(c.get("y", -10**9)) - y))
+
+        if nearest is not None:
+            conf = max(0.25, float(nearest.get("confidence", 0.0)))
+        else:
+            conf = 0.25
+        conf_mult = float(confidence_multiplier)
+        if bool(low_priority_mode):
+            conf_mult = min(conf_mult, 0.55)
+        conf *= conf_mult
+        conf = float(np.clip(conf, 0.0, 0.98))
+        comp_score = float(comp_score_map[y, col]) - float(score_penalty)
+
+        cand = {
+            "y": int(y),
+            "confidence": conf,
+            "color_dist": float(color_dist_map[y, col]),
+            "comp_score": float(comp_score),
+            "axis_dist": float(axis_dist_map[y, col]),
+            "source": "band_midline",
+            "reason": "stroke_centerline_candidate",
+            "band_midline": True,
+            "band_midline_mode": (
+                "flat_tail_only"
+                if bool(flat_tail_only)
+                else "low_priority"
+                if bool(low_priority_mode)
+                else "strict_peak_guard"
+                if bool(strict_peak_guard)
+                else "baseline_v1"
+            ),
+            "band_midline_peak_region": bool(effective_peak_mask[col]),
+            "band_midline_flat_tail_region": bool(flat_tail_mask[col]),
+            "band_top_y": float(y_top[col]),
+            "band_bottom_y": float(y_bottom[col]),
+            "band_thickness": float(bt),
+            "band_evidence_pixels": int(evidence_counts[col]),
+            "band_local_slope": float(slope[col]),
+            "band_local_curvature": float(curvature[col]),
+            "band_local_prominence": float(prominence[col]),
+        }
+        current.append(cand)
+        reason_counts["added"] += 1
+        added_columns.append(int(col))
+        added_thicknesses.append(float(bt))
+        added_confidences.append(float(conf))
+
+    valid_thickness = thickness[np.isfinite(thickness)]
+    meta: Dict[str, Any] = {
+        "enabled": True,
+        "uses_source_numeric": False,
+        "uses_gt": False,
+        "source": "band_midline",
+        "reason": "stroke_centerline_candidate",
+        "mode": (
+            "flat_tail_only"
+            if bool(flat_tail_only)
+            else "low_priority"
+            if bool(low_priority_mode)
+            else "strict_peak_guard"
+            if bool(strict_peak_guard)
+            else "baseline_v1"
+        ),
+        "params": {
+            "window": int(window),
+            "top_percentile": float(top_pct),
+            "bottom_percentile": float(bottom_pct),
+            "min_thickness": float(min_thickness),
+            "max_thickness": float(max_thickness),
+            "max_extra_per_column": int(max_extra_per_column),
+            "peak_guard": bool(peak_guard),
+            "min_evidence_pixels": int(min_evidence_pixels),
+            "duplicate_y_px": int(duplicate_y_px),
+            "strict_peak_guard": bool(strict_peak_guard),
+            "peak_guard_curvature_thresh": peak_guard_curvature_thresh,
+            "peak_guard_slope_thresh": peak_guard_slope_thresh,
+            "peak_guard_prominence_thresh": peak_guard_prominence_thresh,
+            "low_priority_mode": bool(low_priority_mode),
+            "confidence_multiplier": float(confidence_multiplier),
+            "score_penalty": float(score_penalty),
+            "flat_tail_only": bool(flat_tail_only),
+            "require_thick_band": bool(require_thick_band),
+            "min_band_thickness_for_flat_tail": float(min_band_thickness_for_flat_tail),
+        },
+        "candidate_columns_considered": int(considered),
+        "added_candidate_count": int(reason_counts.get("added", 0)),
+        "added_columns": int(len(added_columns)),
+        "added_column_ranges": _band_midline_ranges(added_columns),
+        "skipped_by_peak_guard": int(reason_counts.get("skipped_peak_guard", 0)),
+        "skipped_by_thin_band": int(reason_counts.get("skipped_thin_band", 0)),
+        "skipped_by_sparse_evidence": int(reason_counts.get("skipped_sparse_evidence", 0)),
+        "skipped_by_too_thick_band": int(reason_counts.get("skipped_too_thick_band", 0)),
+        "skipped_by_duplicate_y": int(reason_counts.get("skipped_duplicate_y", 0)),
+        "skipped_by_flat_tail_guard": int(reason_counts.get("skipped_flat_tail_guard", 0)),
+        "skipped_by_low_priority": 0,
+        "skip_reason_counts": dict(sorted(reason_counts.items())),
+        "peak_guard_meta": {
+            **peak_meta,
+            "strict_peak_guard": bool(strict_peak_guard),
+            "strict_guarded_columns": int(np.sum(strict_mask)),
+            "effective_guarded_columns": int(np.sum(effective_peak_mask)),
+            "effective_guarded_column_ranges": _band_midline_ranges(
+                np.nonzero(effective_peak_mask)[0].astype(int).tolist()
+            ),
+            "strict_prominence_threshold_px": float(prom_thr),
+            "strict_slope_threshold_px": float(slope_thr),
+            "strict_curvature_threshold_px": float(curv_thr),
+        },
+        "flat_tail_guard_meta": {
+            "enabled": bool(flat_tail_only),
+            "require_thick_band": bool(require_thick_band),
+            "flat_tail_columns": int(np.sum(flat_tail_mask)),
+            "flat_tail_column_ranges": _band_midline_ranges(
+                np.nonzero(flat_tail_mask)[0].astype(int).tolist()
+            ),
+            "prominence_threshold_px": float(flat_prom_thr),
+            "slope_threshold_px": float(flat_slope_thr),
+            "curvature_threshold_px": float(flat_curv_thr),
+            "min_band_thickness_for_flat_tail": float(min_band_thickness_for_flat_tail),
+        },
+        "band_thickness_summary": {
+            "valid_columns": int(valid_thickness.size),
+            "mean": float(np.mean(valid_thickness)) if valid_thickness.size else None,
+            "median": float(np.median(valid_thickness)) if valid_thickness.size else None,
+            "p90": float(np.percentile(valid_thickness, 90.0)) if valid_thickness.size else None,
+            "added_mean": float(np.mean(added_thicknesses)) if added_thicknesses else None,
+            "added_median": float(np.median(added_thicknesses)) if added_thicknesses else None,
+        },
+        "added_confidence_summary": {
+            "mean": float(np.mean(added_confidences)) if added_confidences else None,
+            "median": float(np.median(added_confidences)) if added_confidences else None,
+            "min": float(np.min(added_confidences)) if added_confidences else None,
+            "max": float(np.max(added_confidences)) if added_confidences else None,
+        },
+        "selected_columns": 0,
+        "selected_column_ranges": [],
+        "selected_source_distribution": {},
+    }
+    return final_candidates, meta
+
+
 def filter_candidates(
     raw_candidates: Dict[int, List[dict]],
     *,

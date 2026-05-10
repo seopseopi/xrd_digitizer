@@ -55,6 +55,8 @@ from trace.components import label_components, compute_component_scores, build_c
 from trace.candidates import (
     LOCAL_EVIDENCE_SORT_TAU_PX_DEFAULT,
     LOCAL_EVIDENCE_SORT_WEIGHT_DEFAULT,
+    add_band_midline_candidates,
+    add_peak_apex_candidates_to_raw,
     annotate_raw_candidates_confidence_dump,
     bridge_final_candidates_for_dp,
     build_raw_candidates,
@@ -64,6 +66,7 @@ from trace.candidates import (
     build_final_candidates,
     candidates_to_map,
     compute_candidate_stats,
+    preserve_peak_apex_final_candidates,
     skeleton_column_hint_y,
     smooth_hint_y_column,
 )
@@ -86,6 +89,10 @@ from trace.recovery import (
     run_recovery, detect_recovery_zones,
     render_branch_compare, render_candidates_overlay,
 )
+from trace.path_level_recovery_v0 import apply_path_level_recovery_v0
+from trace.path_level_recovery_v1 import apply_path_level_recovery_v1
+from trace.path_level_recovery_v2 import apply_path_level_recovery_v2
+from trace.edge_repair import apply_edge_trace_repair_v2
 from trace.postprocess import (
     LOOSE_PEAK_PROMINENCE_FACTOR,
     blend_sg_toward_gapfill_on_high_curvature,
@@ -119,6 +126,22 @@ def _odd_or_min(v: int, *, min_value: int = 3) -> int:
     if x % 2 == 0:
         x += 1
     return x
+
+
+def _column_ranges(cols: List[int]) -> List[List[int]]:
+    if not cols:
+        return []
+    cols_sorted = sorted(set(int(c) for c in cols))
+    out: List[List[int]] = []
+    start = prev = cols_sorted[0]
+    for c in cols_sorted[1:]:
+        if c == prev + 1:
+            prev = c
+            continue
+        out.append([int(start), int(prev)])
+        start = prev = c
+    out.append([int(start), int(prev)])
+    return out
 
 
 def _to_resample(method: str) -> Image.Resampling:
@@ -250,7 +273,10 @@ def run_pipeline(
     mi: ManualInputs,
     *,
     pipeline_version: str = CALIBRATE_V1_1,
-    axis_mask_margin: int = 3,
+    axis_mask_margin: int = 15,
+    mask_b_mag_percentile: float = 50.0,
+    mask_b_thr_clip_lo: float = 10.0,
+    mask_b_thr_clip_hi: float = 40.0,
     use_ridge_candidates: bool = False,
     peak_two_pass: bool = True,
     contrast_aux_settings: ContrastAuxSettings = DEFAULT_CONTRAST_AUX_SETTINGS,
@@ -305,16 +331,113 @@ def run_pipeline(
     roi_upscale_factor: int = 1,
     roi_upscale_method: str = "lanczos",
     final_export_mode: str = "eval_grid",
+    enable_path_level_recovery_v0: bool = False,
+    path_recovery_monitor_window: int = 51,
+    path_recovery_min_run: int = 80,
+    path_recovery_local_dp_margin: int = 120,
+    path_recovery_anchor_window: int = 24,
+    path_recovery_max_region_len: int = 1500,
+    path_recovery_prelockin_guard_col: int = 640,
+    enable_path_level_recovery_v1: bool = False,
+    path_recovery_v1_monitor_window: int = 51,
+    path_recovery_v1_min_run: int = 80,
+    path_recovery_v1_local_dp_margin: int = 120,
+    path_recovery_v1_anchor_window: int = 24,
+    path_recovery_v1_max_region_len: int = 1500,
+    path_recovery_v1_non_bottom_threshold_ratio: float = 0.84,
+    path_recovery_v1_max_extra_non_bottom_per_col: int = 4,
+    path_recovery_v1_filtered_pool_topk: int = 16,
+    path_recovery_v1_prelockin_guard: bool = True,
+    enable_path_level_recovery_v2: bool = False,
+    path_recovery_v2_monitor_window: int = 51,
+    path_recovery_v2_monitor_min_run: int = 80,
+    path_recovery_v2_min_bottom_run: int = 300,
+    path_recovery_v2_min_island_len: int = 24,
+    path_recovery_v2_anchor_window: int = 24,
+    path_recovery_v2_local_dp_margin: int = 120,
+    path_recovery_v2_max_region_len: int = 1500,
+    path_recovery_v2_non_bottom_threshold_ratio: float = 0.84,
+    path_recovery_v2_max_extra_non_bottom_per_col: int = 4,
+    path_recovery_v2_filtered_pool_topk: int = 16,
+    path_recovery_v2_escape_entry_penalty: float = 0.35,
+    path_recovery_v2_escape_max_jump_px: int = 900,
+    path_recovery_v2_prelockin_guard: bool = True,
+    path_recovery_v2_require_instability_signal: bool = True,
+    path_recovery_v2_min_y_separation_px: float = 48.0,
+    path_recovery_v2_max_internal_y_jump: float = 34.0,
+    path_recovery_v2_island_confidence_floor: float = 0.08,
+    enable_band_midline_candidates: bool = False,
+    band_midline_window: int = 3,
+    band_midline_top_percentile: float = 20.0,
+    band_midline_bottom_percentile: float = 80.0,
+    band_midline_max_thickness: float = 120.0,
+    band_midline_min_thickness: float = 3.0,
+    band_midline_max_extra_per_column: int = 1,
+    band_midline_peak_guard: bool = True,
+    band_midline_min_evidence_pixels: int = 3,
+    band_midline_strict_peak_guard: bool = False,
+    band_midline_peak_guard_curvature_thresh: Optional[float] = None,
+    band_midline_peak_guard_slope_thresh: Optional[float] = None,
+    band_midline_peak_guard_prominence_thresh: Optional[float] = None,
+    band_midline_low_priority_mode: bool = False,
+    band_midline_confidence_multiplier: float = 1.0,
+    band_midline_score_penalty: float = 0.0,
+    band_midline_flat_tail_only: bool = False,
+    band_midline_require_thick_band: bool = False,
+    band_midline_min_band_thickness_for_flat_tail: float = 8.0,
+    enable_peak_apex_candidates: bool = False,
+    peak_apex_window: int = 9,
+    peak_apex_top_percentile: float = 10.0,
+    peak_apex_min_prominence: float = 8.0,
+    peak_apex_min_evidence_pixels: int = 5,
+    peak_apex_min_top_support: int = 2,
+    peak_apex_max_extra_per_column: int = 1,
+    peak_apex_preserve_final_slot: bool = False,
+    peak_apex_double_tip_guard: bool = True,
+    enable_edge_trace_repair_v2: bool = False,
+    edge_repair_v2_edge_n: int = 5,
+    edge_repair_v2_stable_gap: int = 5,
+    edge_repair_v2_stable_width: int = 32,
+    edge_repair_v2_min_abs_dev_px: float = 8.0,
+    edge_repair_v2_z_thresh: float = 3.0,
+    edge_repair_v2_max_delta_px: float = 80.0,
+    edge_repair_v2_min_stable_points: int = 12,
+    edge_repair_v2_mode: str = "hybrid",
+    edge_repair_v2_sigma_floor_px: float = 3.0,
+    peak_edge_guard_enabled: bool = False,
+    peak_edge_guard_mode: str = "skip_side",
+    peak_edge_window: int = 16,
+    peak_edge_curvature_thresh: float = 10.0,
+    peak_edge_prominence_thresh: float = 4.5,
+    peak_edge_guard_delta_cap_px: float = 20.0,
 ) -> tuple[RunResult, Dict]:
     """Step 11 전처리 + 추적·캘리브레이션 (운영 v1.1 = calibrate_v1_1).
 
     axis_mask_margin: morphology 이후 `mask_axis_lines` 테두리 제거 폭(px).
+    mask_b_mag_percentile / mask_b_thr_clip_*: build_mask_b 적응형 Sobel 임계 (edge_threshold=None일 때).
     use_ridge_candidates: True면 세로 능선 응답을 후보 신뢰도에 가산 (로드맵 2b, 기본 끔).
     peak_two_pass: False면 피크 검출 단일 prominence 패스만 (로드맵 3a 기본 True).
     """
     w, h = image.size
     stage_timings: Dict[str, float] = {}
     warnings = []
+    if bool(enable_peak_apex_candidates):
+        mixed = []
+        if bool(enable_band_midline_candidates):
+            mixed.append("band_midline")
+        if bool(enable_edge_trace_repair_v2):
+            mixed.append("edge_trace_repair_v2")
+        if bool(enable_path_level_recovery_v0):
+            mixed.append("path_level_recovery_v0")
+        if bool(enable_path_level_recovery_v1):
+            mixed.append("path_level_recovery_v1")
+        if bool(enable_path_level_recovery_v2):
+            mixed.append("path_level_recovery_v2")
+        if mixed:
+            raise ValueError(
+                "peak_apex candidate ablation must be isolated; disable: "
+                + ", ".join(mixed)
+            )
 
     # --- Step 11: preprocess ---
     t0 = time.perf_counter()
@@ -368,7 +491,12 @@ def run_pipeline(
 
     t0 = time.perf_counter()
     mask_a = build_mask_a(color_dist, threshold)
-    mask_b = build_mask_b(roi)
+    mask_b = build_mask_b(
+        roi,
+        mag_percentile=float(mask_b_mag_percentile),
+        mag_thr_clip_lo=float(mask_b_thr_clip_lo),
+        mag_thr_clip_hi=float(mask_b_thr_clip_hi),
+    )
     combined = combine_masks(mask_a, mask_b)
     combined = apply_legend_ignore(combined, proc_legend_ignore_boxes, proc_plot_box_t)
     stage_timings["masks"] = round(time.perf_counter() - t0, 6)
@@ -475,6 +603,42 @@ def run_pipeline(
             raw_cands, contrast_aux_map_np, contrast_aux_settings_proc,
         )
         stage_timings["apply_contrast_aux_to_raw_candidates_sec"] = round(
+            time.perf_counter() - t_candidate_stage, 6
+        )
+
+    peak_apex_meta: Dict[str, Any] = {
+        "enabled": bool(enable_peak_apex_candidates),
+        "uses_gt": False,
+        "uses_source_numeric": False,
+        "source": "peak_apex",
+        "reason": "peak_top_envelope_candidate",
+        "added_candidate_count": 0,
+        "added_columns": 0,
+        "preserved_final_count": 0,
+        "preserved_columns": 0,
+        "selected_columns": 0,
+        "selected_column_ranges": [],
+        "selected_source_distribution": {},
+        "false_double_tip_flags": {},
+    }
+    stage_timings["peak_apex_candidates_sec"] = 0.0
+    if enable_peak_apex_candidates:
+        t_candidate_stage = time.perf_counter()
+        raw_cands, peak_apex_meta = add_peak_apex_candidates_to_raw(
+            raw_cands,
+            morph["raw_candidate_mask"],
+            color_dist,
+            comp_score_map,
+            axis_dist,
+            window=int(peak_apex_window),
+            top_percentile=float(peak_apex_top_percentile),
+            min_prominence=float(peak_apex_min_prominence),
+            min_evidence_pixels=int(peak_apex_min_evidence_pixels),
+            min_top_support=int(peak_apex_min_top_support),
+            max_extra_per_column=int(peak_apex_max_extra_per_column),
+            double_tip_guard=bool(peak_apex_double_tip_guard),
+        )
+        stage_timings["peak_apex_candidates_sec"] = round(
             time.perf_counter() - t_candidate_stage, 6
         )
 
@@ -665,6 +829,72 @@ def run_pipeline(
                 warnings.append(f"debug_preserve_gt_near_final_candidates: {ex}")
         else:
             warnings.append("debug_preserve_gt_near_final_candidates: gt path missing; skipped")
+    if enable_peak_apex_candidates and peak_apex_preserve_final_slot:
+        t_candidate_stage = time.perf_counter()
+        final_cands, preserve_peak_meta = preserve_peak_apex_final_candidates(
+            final_cands,
+            raw_cands,
+            max_extra_per_column=int(peak_apex_max_extra_per_column),
+            double_tip_guard=bool(peak_apex_double_tip_guard),
+        )
+        peak_apex_meta.update(preserve_peak_meta)
+        stage_timings["peak_apex_final_preserve_sec"] = round(
+            time.perf_counter() - t_candidate_stage, 6
+        )
+    else:
+        stage_timings["peak_apex_final_preserve_sec"] = 0.0
+    band_midline_meta: Dict[str, Any] = {
+        "enabled": bool(enable_band_midline_candidates),
+        "uses_source_numeric": False,
+        "uses_gt": False,
+        "source": "band_midline",
+        "reason": "stroke_centerline_candidate",
+        "added_candidate_count": 0,
+        "added_columns": 0,
+        "selected_columns": 0,
+        "selected_column_ranges": [],
+        "skipped_by_peak_guard": 0,
+        "skipped_by_flat_tail_guard": 0,
+        "skipped_by_low_priority": 0,
+        "skipped_by_thin_band": 0,
+        "skipped_by_sparse_evidence": 0,
+        "skipped_by_too_thick_band": 0,
+        "selected_source_distribution": {},
+        "peak_region_selected_columns": 0,
+        "flat_tail_selected_columns": 0,
+    }
+    stage_timings["band_midline_candidates_sec"] = 0.0
+    if enable_band_midline_candidates:
+        t_candidate_stage = time.perf_counter()
+        final_cands, band_midline_meta = add_band_midline_candidates(
+            final_cands,
+            morph["raw_candidate_mask"],
+            raw_cands,
+            color_dist,
+            comp_score_map,
+            axis_dist,
+            window=int(band_midline_window),
+            top_percentile=float(band_midline_top_percentile),
+            bottom_percentile=float(band_midline_bottom_percentile),
+            min_thickness=float(band_midline_min_thickness),
+            max_thickness=float(band_midline_max_thickness),
+            max_extra_per_column=int(band_midline_max_extra_per_column),
+            peak_guard=bool(band_midline_peak_guard),
+            min_evidence_pixels=int(band_midline_min_evidence_pixels),
+            strict_peak_guard=bool(band_midline_strict_peak_guard),
+            peak_guard_curvature_thresh=band_midline_peak_guard_curvature_thresh,
+            peak_guard_slope_thresh=band_midline_peak_guard_slope_thresh,
+            peak_guard_prominence_thresh=band_midline_peak_guard_prominence_thresh,
+            low_priority_mode=bool(band_midline_low_priority_mode),
+            confidence_multiplier=float(band_midline_confidence_multiplier),
+            score_penalty=float(band_midline_score_penalty),
+            flat_tail_only=bool(band_midline_flat_tail_only),
+            require_thick_band=bool(band_midline_require_thick_band),
+            min_band_thickness_for_flat_tail=float(band_midline_min_band_thickness_for_flat_tail),
+        )
+        stage_timings["band_midline_candidates_sec"] = round(
+            time.perf_counter() - t_candidate_stage, 6
+        )
     cand_stats = compute_candidate_stats(raw_cands, filtered_cands, final_cands, missing_cols, roi_w)
     if use_dp_candidate_bridge:
         cand_stats["dp_candidate_bridge"] = True
@@ -905,6 +1135,289 @@ def run_pipeline(
         warnings.append(f"recovery: {n_zones} zones detected, {n_resolved} resolved")
         for fl in recovery_result.get("failure_labels", []):
             warnings.append(f"recovery: failure [{fl['label']}] at cols {fl['zone']}")
+
+    path_level_recovery_meta: Dict[str, Any] = {
+        "enabled": bool(
+            enable_path_level_recovery_v0
+            and not enable_path_level_recovery_v1
+            and not enable_path_level_recovery_v2
+        ),
+        "applied": False,
+        "uses_source_numeric": False,
+        "uses_gt": False,
+        "risk_run_ranges": [],
+        "recovered_ranges": [],
+        "anchor_windows": [],
+        "max_abs_delta_y": 0.0,
+        "changed_columns": 0,
+        "warning": None,
+    }
+    path_level_recovery_v1_meta: Dict[str, Any] = {
+        "enabled": bool(enable_path_level_recovery_v1 and not enable_path_level_recovery_v2),
+        "applied": False,
+        "uses_source_numeric": False,
+        "uses_gt": False,
+        "risk_run_ranges": [],
+        "recovered_ranges": [],
+        "added_non_bottom_candidates": 0,
+        "added_non_bottom_columns": 0,
+        "selected_added_non_bottom_columns": 0,
+        "changed_columns": 0,
+        "max_abs_delta_y": 0.0,
+        "prelockin_guard_skipped_ranges": [],
+        "warnings": [],
+        "dp_cost_breakdown": [],
+    }
+    path_level_recovery_v2_meta: Dict[str, Any] = {
+        "enabled": bool(enable_path_level_recovery_v2),
+        "applied": False,
+        "uses_source_numeric": False,
+        "uses_gt": False,
+        "risk_run_ranges": [],
+        "triggered_ranges": [],
+        "skipped_ranges": [],
+        "non_bottom_island_ranges": [],
+        "escape_transition_columns": [],
+        "added_non_bottom_candidates": 0,
+        "added_non_bottom_columns": 0,
+        "selected_added_non_bottom_columns": 0,
+        "changed_columns": 0,
+        "max_abs_delta_y": 0.0,
+        "state_path_counts": {"bottom": 0, "escaped": 0},
+        "debug_size_guard": "summary_only_no_full_candidate_pool",
+        "warnings": [],
+    }
+
+    if enable_path_level_recovery_v2:
+        t_plr_v2 = time.perf_counter()
+        trace_path, path_level_recovery_v2_meta = apply_path_level_recovery_v2(
+            trace_path,
+            final_cands,
+            filtered_cands,
+            roi_w=int(roi_w),
+            roi_h=int(roi_h),
+            monitor_window=int(path_recovery_v2_monitor_window),
+            monitor_min_run_for_detection=int(path_recovery_v2_monitor_min_run),
+            min_bottom_run_len=int(path_recovery_v2_min_bottom_run),
+            max_region_len=int(path_recovery_v2_max_region_len),
+            prelockin_guard_col=int(path_recovery_prelockin_guard_col),
+            anchor_window=int(path_recovery_v2_anchor_window),
+            local_dp_margin=int(path_recovery_v2_local_dp_margin),
+            non_bottom_threshold_ratio=float(path_recovery_v2_non_bottom_threshold_ratio),
+            max_extra_non_bottom_per_col=int(path_recovery_v2_max_extra_non_bottom_per_col),
+            filtered_pool_topk=int(path_recovery_v2_filtered_pool_topk),
+            prelockin_guard=bool(path_recovery_v2_prelockin_guard),
+            escape_entry_penalty=float(path_recovery_v2_escape_entry_penalty),
+            escape_max_jump_px=int(path_recovery_v2_escape_max_jump_px),
+            require_instability_signal=bool(path_recovery_v2_require_instability_signal),
+            min_y_separation_px=float(path_recovery_v2_min_y_separation_px),
+            min_island_len=int(path_recovery_v2_min_island_len),
+            max_internal_y_jump=float(path_recovery_v2_max_internal_y_jump),
+            island_confidence_floor=float(path_recovery_v2_island_confidence_floor),
+        )
+        stage_timings["path_level_recovery_v2_sec"] = round(time.perf_counter() - t_plr_v2, 6)
+        stage_timings.setdefault("path_level_recovery_v1_sec", 0.0)
+        stage_timings.setdefault("path_level_recovery_v0_sec", 0.0)
+    elif enable_path_level_recovery_v1:
+        t_plr_v1 = time.perf_counter()
+        trace_path, path_level_recovery_v1_meta = apply_path_level_recovery_v1(
+            trace_path,
+            final_cands,
+            filtered_cands,
+            roi_w=int(roi_w),
+            roi_h=int(roi_h),
+            monitor_window=int(path_recovery_v1_monitor_window),
+            monitor_min_run_for_detection=int(path_recovery_v1_min_run),
+            min_bottom_run_len=int(path_recovery_v1_min_run),
+            max_region_len=int(path_recovery_v1_max_region_len),
+            prelockin_guard_col=int(path_recovery_prelockin_guard_col),
+            anchor_window=int(path_recovery_v1_anchor_window),
+            local_dp_margin=int(path_recovery_v1_local_dp_margin),
+            non_bottom_threshold_ratio=float(path_recovery_v1_non_bottom_threshold_ratio),
+            max_extra_non_bottom_per_col=int(path_recovery_v1_max_extra_non_bottom_per_col),
+            filtered_pool_topk=int(path_recovery_v1_filtered_pool_topk),
+            prelockin_guard=bool(path_recovery_v1_prelockin_guard),
+        )
+        stage_timings["path_level_recovery_v1_sec"] = round(time.perf_counter() - t_plr_v1, 6)
+        stage_timings.setdefault("path_level_recovery_v0_sec", 0.0)
+        stage_timings.setdefault("path_level_recovery_v2_sec", 0.0)
+    elif enable_path_level_recovery_v0:
+        before_plr_y = [
+            float(trace_path[i]) if i < len(trace_path) and trace_path[i] is not None else None
+            for i in range(int(roi_w))
+        ]
+        t_plr = time.perf_counter()
+        trace_path, path_level_recovery_meta = apply_path_level_recovery_v0(
+            trace_path,
+            final_cands,
+            roi_w=int(roi_w),
+            roi_h=int(roi_h),
+            monitor_window=int(path_recovery_monitor_window),
+            monitor_min_run_for_detection=int(path_recovery_min_run),
+            min_bottom_run_len=int(path_recovery_min_run),
+            max_region_len=int(path_recovery_max_region_len),
+            prelockin_guard_col=int(path_recovery_prelockin_guard_col),
+            anchor_window=int(path_recovery_anchor_window),
+            local_dp_margin=int(path_recovery_local_dp_margin),
+        )
+        path_level_recovery_meta["original_selected_y_px"] = before_plr_y
+        path_level_recovery_meta["recovered_selected_y_px"] = [
+            float(trace_path[i]) if i < len(trace_path) and trace_path[i] is not None else None
+            for i in range(int(roi_w))
+        ]
+        stage_timings["path_level_recovery_v0_sec"] = round(time.perf_counter() - t_plr, 6)
+        stage_timings.setdefault("path_level_recovery_v1_sec", 0.0)
+        stage_timings.setdefault("path_level_recovery_v2_sec", 0.0)
+    else:
+        stage_timings.setdefault("path_level_recovery_v0_sec", 0.0)
+        stage_timings.setdefault("path_level_recovery_v1_sec", 0.0)
+        stage_timings.setdefault("path_level_recovery_v2_sec", 0.0)
+
+    lookup_cands: Dict[int, List[dict]] = final_cands
+    if bool(enable_path_level_recovery_v1) and path_level_recovery_v1_meta.get(
+        "lookup_candidates_for_trace"
+    ):
+        lookup_cands = path_level_recovery_v1_meta["lookup_candidates_for_trace"]  # type: ignore[assignment]
+
+    trace_confidences: List[Optional[float]] = []
+    if bool(enable_path_level_recovery_v2):
+        tcp = path_level_recovery_v2_meta.get("trace_confidence_per_column")
+        if isinstance(tcp, list) and len(tcp) == int(roi_w):
+            trace_confidences = [float(x) if x is not None else None for x in tcp]  # type: ignore[list-item]
+        else:
+            for col_idx, y_val in enumerate(trace_path):
+                if y_val is not None and col_idx in final_cands:
+                    match = [c for c in final_cands[col_idx] if c["y"] == y_val]
+                    trace_confidences.append(match[0]["confidence"] if match else 0.5)
+                else:
+                    trace_confidences.append(None)
+    else:
+        for col_idx, y_val in enumerate(trace_path):
+            if y_val is not None and col_idx in lookup_cands:
+                match = [c for c in lookup_cands[col_idx] if c["y"] == y_val]
+                trace_confidences.append(match[0]["confidence"] if match else 0.5)
+            else:
+                trace_confidences.append(None)
+
+    edge_trace_repair_v2_meta: Dict[str, Any] = {
+        "enabled": bool(enable_edge_trace_repair_v2),
+        "applied": False,
+        "uses_gt": False,
+        "uses_source_numeric": False,
+    }
+    if enable_edge_trace_repair_v2:
+        t_er = time.perf_counter()
+        trace_path, edge_trace_repair_v2_meta = apply_edge_trace_repair_v2(
+            trace_path,
+            final_cands,
+            roi_w=int(roi_w),
+            roi_h=int(roi_h),
+            edge_n=int(edge_repair_v2_edge_n),
+            stable_gap=int(edge_repair_v2_stable_gap),
+            stable_width=int(edge_repair_v2_stable_width),
+            min_abs_dev_px=float(edge_repair_v2_min_abs_dev_px),
+            z_thresh=float(edge_repair_v2_z_thresh),
+            max_repair_delta_px=float(edge_repair_v2_max_delta_px),
+            min_stable_points=int(edge_repair_v2_min_stable_points),
+            mode=str(edge_repair_v2_mode),
+            sigma_floor_px=float(edge_repair_v2_sigma_floor_px),
+            peak_edge_guard_enabled=bool(peak_edge_guard_enabled),
+            peak_edge_guard_mode=str(peak_edge_guard_mode),
+            peak_edge_window=int(peak_edge_window),
+            peak_edge_curvature_thresh=float(peak_edge_curvature_thresh),
+            peak_edge_prominence_thresh=float(peak_edge_prominence_thresh),
+            peak_edge_guard_delta_cap_px=float(peak_edge_guard_delta_cap_px),
+        )
+        edge_trace_repair_v2_meta["enabled"] = True
+        stage_timings["edge_trace_repair_v2_sec"] = round(time.perf_counter() - t_er, 6)
+        trace_confidences = []
+        for col_idx, y_val in enumerate(trace_path):
+            if y_val is not None and col_idx in lookup_cands:
+                match = [c for c in lookup_cands[col_idx] if c["y"] == y_val]
+                trace_confidences.append(match[0]["confidence"] if match else 0.5)
+            else:
+                trace_confidences.append(None)
+    else:
+        stage_timings.setdefault("edge_trace_repair_v2_sec", 0.0)
+
+    if peak_apex_meta.get("enabled"):
+        src_counts: Dict[str, int] = {}
+        selected_peak_cols: List[int] = []
+        false_tip_selected_cols: List[int] = []
+        selected_profile: List[Dict[str, Any]] = []
+        for col_idx, y_val in enumerate(trace_path):
+            if y_val is None or col_idx not in final_cands:
+                continue
+            yy = int(y_val)
+            match = [c for c in final_cands[col_idx] if int(c.get("y", -10**9)) == yy]
+            src = str(match[0].get("source", "unknown")) if match else "unmatched"
+            src_counts[src] = src_counts.get(src, 0) + 1
+            if src == "peak_apex":
+                selected_peak_cols.append(int(col_idx))
+                c0 = match[0] if match else {}
+                if bool(c0.get("peak_apex_false_double_tip_flag")):
+                    false_tip_selected_cols.append(int(col_idx))
+                selected_profile.append(
+                    {
+                        "col": int(col_idx),
+                        "y": int(yy),
+                        "confidence": float(c0.get("confidence", 0.0)) if c0 else None,
+                        "comp_score": float(c0.get("comp_score", 0.0)) if c0 else None,
+                        "peak_apex_prominence": float(c0.get("peak_apex_prominence", 0.0)) if c0 else None,
+                        "peak_apex_band_thickness": float(c0.get("peak_apex_band_thickness", 0.0)) if c0 else None,
+                        "peak_apex_false_double_tip_flag": bool(c0.get("peak_apex_false_double_tip_flag")) if c0 else False,
+                        "peak_apex_true_doublet_possible_flag": bool(c0.get("peak_apex_true_doublet_possible_flag")) if c0 else False,
+                    }
+                )
+        peak_apex_meta["selected_columns"] = int(len(selected_peak_cols))
+        peak_apex_meta["selected_column_ranges"] = _column_ranges(selected_peak_cols)
+        peak_apex_meta["selected_source_distribution"] = dict(sorted(src_counts.items()))
+        peak_apex_meta["selected_false_double_tip_columns"] = int(len(false_tip_selected_cols))
+        peak_apex_meta["selected_false_double_tip_column_ranges"] = _column_ranges(false_tip_selected_cols)
+        peak_apex_meta["selected_peak_apex_profile"] = selected_profile
+
+    if band_midline_meta.get("enabled"):
+        src_counts: Dict[str, int] = {}
+        selected_band_cols: List[int] = []
+        peak_band_cols: List[int] = []
+        flat_tail_band_cols: List[int] = []
+        selected_band_profile: List[Dict[str, Any]] = []
+        for col_idx, y_val in enumerate(trace_path):
+            if y_val is None or col_idx not in final_cands:
+                continue
+            yy = int(y_val)
+            match = [c for c in final_cands[col_idx] if int(c.get("y", -10**9)) == yy]
+            src = str(match[0].get("source", "unknown")) if match else "unmatched"
+            src_counts[src] = src_counts.get(src, 0) + 1
+            if src == "band_midline":
+                selected_band_cols.append(int(col_idx))
+                if match and bool(match[0].get("band_midline_peak_region")):
+                    peak_band_cols.append(int(col_idx))
+                if match and bool(match[0].get("band_midline_flat_tail_region")):
+                    flat_tail_band_cols.append(int(col_idx))
+                c0 = match[0] if match else {}
+                selected_band_profile.append(
+                    {
+                        "col": int(col_idx),
+                        "y": int(yy),
+                        "confidence": float(c0.get("confidence", 0.0)) if c0 else None,
+                        "comp_score": float(c0.get("comp_score", 0.0)) if c0 else None,
+                        "band_thickness": float(c0.get("band_thickness", 0.0)) if c0 else None,
+                        "band_local_slope": float(c0.get("band_local_slope", 0.0)) if c0 else None,
+                        "band_local_curvature": float(c0.get("band_local_curvature", 0.0)) if c0 else None,
+                        "band_local_prominence": float(c0.get("band_local_prominence", 0.0)) if c0 else None,
+                        "band_midline_peak_region": bool(c0.get("band_midline_peak_region")) if c0 else False,
+                        "band_midline_flat_tail_region": bool(c0.get("band_midline_flat_tail_region")) if c0 else False,
+                    }
+                )
+        band_midline_meta["selected_columns"] = int(len(selected_band_cols))
+        band_midline_meta["selected_column_ranges"] = _column_ranges(selected_band_cols)
+        band_midline_meta["selected_source_distribution"] = dict(sorted(src_counts.items()))
+        band_midline_meta["peak_region_selected_columns"] = int(len(peak_band_cols))
+        band_midline_meta["peak_region_selected_column_ranges"] = _column_ranges(peak_band_cols)
+        band_midline_meta["flat_tail_selected_columns"] = int(len(flat_tail_band_cols))
+        band_midline_meta["flat_tail_selected_column_ranges"] = _column_ranges(flat_tail_band_cols)
+        band_midline_meta["selected_band_midline_profile"] = selected_band_profile
 
     if contrast_aux_settings_proc.use_contrast_aux:
         cand_report = {
@@ -1159,6 +1672,59 @@ def run_pipeline(
         "final_export_point_count": int(len(final_tt)),
         "highres_available": bool(len(tt_hi) > 0),
     }
+    if enable_path_level_recovery_v0:
+        export_metadata["path_level_recovery_v0"] = {
+            "enabled": True,
+            "applied": bool(path_level_recovery_meta.get("applied")),
+            "changed_columns": int(path_level_recovery_meta.get("changed_columns") or 0),
+            "max_abs_delta_y_px": float(path_level_recovery_meta.get("max_abs_delta_y") or 0.0),
+        }
+    if enable_path_level_recovery_v1:
+        export_metadata["path_level_recovery_v1"] = {
+            "enabled": True,
+            "applied": bool(path_level_recovery_v1_meta.get("applied")),
+            "changed_columns": int(path_level_recovery_v1_meta.get("changed_columns") or 0),
+            "max_abs_delta_y_px": float(path_level_recovery_v1_meta.get("max_abs_delta_y") or 0.0),
+            "selected_added_non_bottom_columns": int(
+                path_level_recovery_v1_meta.get("selected_added_non_bottom_columns") or 0
+            ),
+        }
+    if enable_path_level_recovery_v2:
+        export_metadata["path_level_recovery_v2"] = {
+            "enabled": True,
+            "applied": bool(path_level_recovery_v2_meta.get("applied")),
+            "changed_columns": int(path_level_recovery_v2_meta.get("changed_columns") or 0),
+            "max_abs_delta_y_px": float(path_level_recovery_v2_meta.get("max_abs_delta_y") or 0.0),
+            "selected_added_non_bottom_columns": int(
+                path_level_recovery_v2_meta.get("selected_added_non_bottom_columns") or 0
+            ),
+            "escape_transition_columns_count": len(
+                path_level_recovery_v2_meta.get("escape_transition_columns") or []
+            ),
+        }
+    if enable_band_midline_candidates:
+        export_metadata["band_midline_candidates"] = {
+            "enabled": True,
+            "added_candidate_count": int(band_midline_meta.get("added_candidate_count") or 0),
+            "added_columns": int(band_midline_meta.get("added_columns") or 0),
+            "selected_columns": int(band_midline_meta.get("selected_columns") or 0),
+        }
+    if enable_peak_apex_candidates:
+        export_metadata["peak_apex_candidates"] = {
+            "enabled": True,
+            "added_candidate_count": int(peak_apex_meta.get("added_candidate_count") or 0),
+            "added_columns": int(peak_apex_meta.get("added_columns") or 0),
+            "preserved_final_count": int(peak_apex_meta.get("preserved_final_count") or 0),
+            "selected_columns": int(peak_apex_meta.get("selected_columns") or 0),
+        }
+    if enable_edge_trace_repair_v2:
+        export_metadata["edge_trace_repair_v2"] = {
+            "enabled": True,
+            "applied": bool(edge_trace_repair_v2_meta.get("applied")),
+            "changed_columns": int(edge_trace_repair_v2_meta.get("changed_columns") or 0),
+            "max_abs_delta_y_px": float(edge_trace_repair_v2_meta.get("max_abs_delta_y") or 0.0),
+            "mode": str(edge_repair_v2_mode),
+        }
     audit_resolution["final_export_mode"] = export_mode
     audit_resolution["final_export_point_count"] = int(len(final_tt))
     audit_resolution["highres_export_point_count"] = int(len(tt_hi))
@@ -1281,6 +1847,14 @@ def run_pipeline(
             dp_cost_debug = {"enabled": False, "error": str(ex)}
             warnings.append(f"dp_cost_debug: {ex}")
 
+    if enable_path_level_recovery_v2:
+        _path_level_recovery_v2_debug = dict(path_level_recovery_v2_meta)
+        _tcp = _path_level_recovery_v2_debug.pop("trace_confidence_per_column", None)
+        if isinstance(_tcp, list):
+            _path_level_recovery_v2_debug["trace_confidence_per_column_omitted_len"] = int(len(_tcp))
+    else:
+        _path_level_recovery_v2_debug = {"enabled": False}
+
     debug_data: Dict = {
         "roi_preview": Image.fromarray(roi),
         "color_mask": _mask_to_image(mask_a),
@@ -1307,6 +1881,28 @@ def run_pipeline(
             "n_components": n_comp,
             "component_scores": {str(k): v for k, v in comp_scores.items()},
             "candidate_stats": cand_stats,
+            "peak_apex_candidates": peak_apex_meta,
+            "band_midline_candidates": band_midline_meta,
+            "edge_trace_repair_v2": (
+                {
+                    k: v
+                    for k, v in edge_trace_repair_v2_meta.items()
+                    if k
+                    not in ("edge_trace_repair_v2_detector", "edge_trace_repair_v2_peak_edge_guard")
+                }
+                if enable_edge_trace_repair_v2
+                else edge_trace_repair_v2_meta
+            ),
+            "edge_trace_repair_v2_detector": (
+                edge_trace_repair_v2_meta.get("edge_trace_repair_v2_detector")
+                if enable_edge_trace_repair_v2
+                else None
+            ),
+            "edge_trace_repair_v2_peak_edge_guard": (
+                edge_trace_repair_v2_meta.get("edge_trace_repair_v2_peak_edge_guard")
+                if enable_edge_trace_repair_v2
+                else None
+            ),
             "candidate_filter_debug": filter_debug if filter_debug else None,
             "candidate_final_debug": candidate_final_debug_accum.get("candidate_final_debug"),
             "candidate_gt_proximity": candidate_gt_proximity_diag,
@@ -1318,6 +1914,10 @@ def run_pipeline(
                 "diagnostics": trace_result["diagnostics"],
                 "blockwise": trace_result["blockwise"],
                 "path": trace_result["path"],
+                "selected_y_px": [
+                    float(trace_path[i]) if i < len(trace_path) and trace_path[i] is not None else None
+                    for i in range(int(roi_w))
+                ],
             },
             "recovery": recovery_debug,
             "postprocess": {
@@ -1353,6 +1953,9 @@ def run_pipeline(
             "warnings": warnings,
             "v1_options": {
                 "axis_mask_margin": int(amargin),
+                "mask_b_mag_percentile": float(mask_b_mag_percentile),
+                "mask_b_thr_clip_lo": float(mask_b_thr_clip_lo),
+                "mask_b_thr_clip_hi": float(mask_b_thr_clip_hi),
                 "use_ridge_candidates": bool(use_ridge_candidates),
                 "peak_two_pass": bool(peak_two_pass),
                 "use_contrast_aux": bool(contrast_aux_settings_proc.use_contrast_aux),
@@ -1425,6 +2028,52 @@ def run_pipeline(
                 "candidate_final_continuity_window": int(candidate_final_continuity_window),
                 "candidate_final_continuity_max_jump": int(continuity_max_jump_proc),
                 "candidate_final_max_dp_bridge_frac": candidate_final_max_dp_bridge_frac,
+                "enable_band_midline_candidates": bool(enable_band_midline_candidates),
+                "band_midline_window": int(band_midline_window),
+                "band_midline_top_percentile": float(band_midline_top_percentile),
+                "band_midline_bottom_percentile": float(band_midline_bottom_percentile),
+                "band_midline_max_thickness": float(band_midline_max_thickness),
+                "band_midline_min_thickness": float(band_midline_min_thickness),
+                "band_midline_max_extra_per_column": int(band_midline_max_extra_per_column),
+                "band_midline_peak_guard": bool(band_midline_peak_guard),
+                "band_midline_min_evidence_pixels": int(band_midline_min_evidence_pixels),
+                "band_midline_strict_peak_guard": bool(band_midline_strict_peak_guard),
+                "band_midline_peak_guard_curvature_thresh": band_midline_peak_guard_curvature_thresh,
+                "band_midline_peak_guard_slope_thresh": band_midline_peak_guard_slope_thresh,
+                "band_midline_peak_guard_prominence_thresh": band_midline_peak_guard_prominence_thresh,
+                "band_midline_low_priority_mode": bool(band_midline_low_priority_mode),
+                "band_midline_confidence_multiplier": float(band_midline_confidence_multiplier),
+                "band_midline_score_penalty": float(band_midline_score_penalty),
+                "band_midline_flat_tail_only": bool(band_midline_flat_tail_only),
+                "band_midline_require_thick_band": bool(band_midline_require_thick_band),
+                "band_midline_min_band_thickness_for_flat_tail": float(
+                    band_midline_min_band_thickness_for_flat_tail
+                ),
+                "enable_peak_apex_candidates": bool(enable_peak_apex_candidates),
+                "peak_apex_window": int(peak_apex_window),
+                "peak_apex_top_percentile": float(peak_apex_top_percentile),
+                "peak_apex_min_prominence": float(peak_apex_min_prominence),
+                "peak_apex_min_evidence_pixels": int(peak_apex_min_evidence_pixels),
+                "peak_apex_min_top_support": int(peak_apex_min_top_support),
+                "peak_apex_max_extra_per_column": int(peak_apex_max_extra_per_column),
+                "peak_apex_preserve_final_slot": bool(peak_apex_preserve_final_slot),
+                "peak_apex_double_tip_guard": bool(peak_apex_double_tip_guard),
+                "enable_edge_trace_repair_v2": bool(enable_edge_trace_repair_v2),
+                "edge_repair_v2_edge_n": int(edge_repair_v2_edge_n),
+                "edge_repair_v2_stable_gap": int(edge_repair_v2_stable_gap),
+                "edge_repair_v2_stable_width": int(edge_repair_v2_stable_width),
+                "edge_repair_v2_min_abs_dev_px": float(edge_repair_v2_min_abs_dev_px),
+                "edge_repair_v2_z_thresh": float(edge_repair_v2_z_thresh),
+                "edge_repair_v2_max_delta_px": float(edge_repair_v2_max_delta_px),
+                "edge_repair_v2_min_stable_points": int(edge_repair_v2_min_stable_points),
+                "edge_repair_v2_mode": str(edge_repair_v2_mode),
+                "edge_repair_v2_sigma_floor_px": float(edge_repair_v2_sigma_floor_px),
+                "peak_edge_guard_enabled": bool(peak_edge_guard_enabled),
+                "peak_edge_guard_mode": str(peak_edge_guard_mode),
+                "peak_edge_window": int(peak_edge_window),
+                "peak_edge_curvature_thresh": float(peak_edge_curvature_thresh),
+                "peak_edge_prominence_thresh": float(peak_edge_prominence_thresh),
+                "peak_edge_guard_delta_cap_px": float(peak_edge_guard_delta_cap_px),
                 "debug_dump_raw_confidence_features": bool(debug_dump_raw_confidence_features),
                 "runtime_oracle_rerank": bool(oracle_active),
                 "runtime_selective_oracle_rerank": bool(selective_active),
@@ -1434,6 +2083,53 @@ def run_pipeline(
                 "peak_apex_roi_radius": int(peak_apex_roi_radius_proc),
                 "roi_upscale_factor": int(roi_up_factor),
                 "roi_upscale_method": str(roi_up_method),
+                "enable_path_level_recovery_v0": bool(enable_path_level_recovery_v0),
+                "path_recovery_monitor_window": int(path_recovery_monitor_window),
+                "path_recovery_min_run": int(path_recovery_min_run),
+                "path_recovery_local_dp_margin": int(path_recovery_local_dp_margin),
+                "path_recovery_anchor_window": int(path_recovery_anchor_window),
+                "path_recovery_max_region_len": int(path_recovery_max_region_len),
+                "path_recovery_prelockin_guard_col": int(path_recovery_prelockin_guard_col),
+                "enable_path_level_recovery_v1": bool(enable_path_level_recovery_v1),
+                "path_recovery_v1_monitor_window": int(path_recovery_v1_monitor_window),
+                "path_recovery_v1_min_run": int(path_recovery_v1_min_run),
+                "path_recovery_v1_local_dp_margin": int(path_recovery_v1_local_dp_margin),
+                "path_recovery_v1_anchor_window": int(path_recovery_v1_anchor_window),
+                "path_recovery_v1_max_region_len": int(path_recovery_v1_max_region_len),
+                "path_recovery_v1_non_bottom_threshold_ratio": float(
+                    path_recovery_v1_non_bottom_threshold_ratio
+                ),
+                "path_recovery_v1_max_extra_non_bottom_per_col": int(
+                    path_recovery_v1_max_extra_non_bottom_per_col
+                ),
+                "path_recovery_v1_filtered_pool_topk": int(path_recovery_v1_filtered_pool_topk),
+                "path_recovery_v1_prelockin_guard": bool(path_recovery_v1_prelockin_guard),
+                "enable_path_level_recovery_v2": bool(enable_path_level_recovery_v2),
+                "path_recovery_v2_monitor_window": int(path_recovery_v2_monitor_window),
+                "path_recovery_v2_monitor_min_run": int(path_recovery_v2_monitor_min_run),
+                "path_recovery_v2_min_bottom_run": int(path_recovery_v2_min_bottom_run),
+                "path_recovery_v2_min_island_len": int(path_recovery_v2_min_island_len),
+                "path_recovery_v2_anchor_window": int(path_recovery_v2_anchor_window),
+                "path_recovery_v2_local_dp_margin": int(path_recovery_v2_local_dp_margin),
+                "path_recovery_v2_max_region_len": int(path_recovery_v2_max_region_len),
+                "path_recovery_v2_non_bottom_threshold_ratio": float(
+                    path_recovery_v2_non_bottom_threshold_ratio
+                ),
+                "path_recovery_v2_max_extra_non_bottom_per_col": int(
+                    path_recovery_v2_max_extra_non_bottom_per_col
+                ),
+                "path_recovery_v2_filtered_pool_topk": int(path_recovery_v2_filtered_pool_topk),
+                "path_recovery_v2_escape_entry_penalty": float(path_recovery_v2_escape_entry_penalty),
+                "path_recovery_v2_escape_max_jump_px": int(path_recovery_v2_escape_max_jump_px),
+                "path_recovery_v2_prelockin_guard": bool(path_recovery_v2_prelockin_guard),
+                "path_recovery_v2_require_instability_signal": bool(
+                    path_recovery_v2_require_instability_signal
+                ),
+                "path_recovery_v2_min_y_separation_px": float(path_recovery_v2_min_y_separation_px),
+                "path_recovery_v2_max_internal_y_jump": float(path_recovery_v2_max_internal_y_jump),
+                "path_recovery_v2_island_confidence_floor": float(
+                    path_recovery_v2_island_confidence_floor
+                ),
             },
             "model_assist": model_assist_meta,
             "contrast_aux": {
@@ -1455,6 +2151,10 @@ def run_pipeline(
                 "px_parameter_scaling": "internal_processing_px_scaled_by_factor; numeric_export_back_to_original_roi",
             },
             "resolution_export_audit": audit_resolution,
+            "path_level_recovery_v0": path_level_recovery_meta,
+            "path_level_recovery_v1": path_level_recovery_v1_meta,
+            "path_level_recovery_v2": _path_level_recovery_v2_debug,
+            "edge_trace_repair_v2_summary": edge_trace_repair_v2_meta,
         },
     }
 
@@ -1519,7 +2219,10 @@ def run_single(
     tune_json: str | None = None,
     allow_experimental_v2: bool = False,
     *,
-    axis_mask_margin: int = 3,
+    axis_mask_margin: int = 15,
+    mask_b_mag_percentile: float = 50.0,
+    mask_b_thr_clip_lo: float = 10.0,
+    mask_b_thr_clip_hi: float = 40.0,
     use_ridge_candidates: bool = False,
     peak_two_pass: bool = True,
     contrast_aux_settings: ContrastAuxSettings = DEFAULT_CONTRAST_AUX_SETTINGS,
@@ -1574,6 +2277,85 @@ def run_single(
     roi_upscale_method: str = "lanczos",
     final_export_mode: str = "eval_grid",
     gt_json_path_for_metadata: Optional[str] = None,
+    enable_path_level_recovery_v0: bool = False,
+    path_recovery_monitor_window: int = 51,
+    path_recovery_min_run: int = 80,
+    path_recovery_local_dp_margin: int = 120,
+    path_recovery_anchor_window: int = 24,
+    path_recovery_max_region_len: int = 1500,
+    path_recovery_prelockin_guard_col: int = 640,
+    enable_path_level_recovery_v1: bool = False,
+    path_recovery_v1_monitor_window: int = 51,
+    path_recovery_v1_min_run: int = 80,
+    path_recovery_v1_local_dp_margin: int = 120,
+    path_recovery_v1_anchor_window: int = 24,
+    path_recovery_v1_max_region_len: int = 1500,
+    path_recovery_v1_non_bottom_threshold_ratio: float = 0.84,
+    path_recovery_v1_max_extra_non_bottom_per_col: int = 4,
+    path_recovery_v1_filtered_pool_topk: int = 16,
+    path_recovery_v1_prelockin_guard: bool = True,
+    enable_path_level_recovery_v2: bool = False,
+    path_recovery_v2_monitor_window: int = 51,
+    path_recovery_v2_monitor_min_run: int = 80,
+    path_recovery_v2_min_bottom_run: int = 300,
+    path_recovery_v2_min_island_len: int = 24,
+    path_recovery_v2_anchor_window: int = 24,
+    path_recovery_v2_local_dp_margin: int = 120,
+    path_recovery_v2_max_region_len: int = 1500,
+    path_recovery_v2_non_bottom_threshold_ratio: float = 0.84,
+    path_recovery_v2_max_extra_non_bottom_per_col: int = 4,
+    path_recovery_v2_filtered_pool_topk: int = 16,
+    path_recovery_v2_escape_entry_penalty: float = 0.35,
+    path_recovery_v2_escape_max_jump_px: int = 900,
+    path_recovery_v2_prelockin_guard: bool = True,
+    path_recovery_v2_require_instability_signal: bool = True,
+    path_recovery_v2_min_y_separation_px: float = 48.0,
+    path_recovery_v2_max_internal_y_jump: float = 34.0,
+    path_recovery_v2_island_confidence_floor: float = 0.08,
+    enable_band_midline_candidates: bool = False,
+    band_midline_window: int = 3,
+    band_midline_top_percentile: float = 20.0,
+    band_midline_bottom_percentile: float = 80.0,
+    band_midline_max_thickness: float = 120.0,
+    band_midline_min_thickness: float = 3.0,
+    band_midline_max_extra_per_column: int = 1,
+    band_midline_peak_guard: bool = True,
+    band_midline_min_evidence_pixels: int = 3,
+    band_midline_strict_peak_guard: bool = False,
+    band_midline_peak_guard_curvature_thresh: Optional[float] = None,
+    band_midline_peak_guard_slope_thresh: Optional[float] = None,
+    band_midline_peak_guard_prominence_thresh: Optional[float] = None,
+    band_midline_low_priority_mode: bool = False,
+    band_midline_confidence_multiplier: float = 1.0,
+    band_midline_score_penalty: float = 0.0,
+    band_midline_flat_tail_only: bool = False,
+    band_midline_require_thick_band: bool = False,
+    band_midline_min_band_thickness_for_flat_tail: float = 8.0,
+    enable_peak_apex_candidates: bool = False,
+    peak_apex_window: int = 9,
+    peak_apex_top_percentile: float = 10.0,
+    peak_apex_min_prominence: float = 8.0,
+    peak_apex_min_evidence_pixels: int = 5,
+    peak_apex_min_top_support: int = 2,
+    peak_apex_max_extra_per_column: int = 1,
+    peak_apex_preserve_final_slot: bool = False,
+    peak_apex_double_tip_guard: bool = True,
+    enable_edge_trace_repair_v2: bool = False,
+    edge_repair_v2_edge_n: int = 5,
+    edge_repair_v2_stable_gap: int = 5,
+    edge_repair_v2_stable_width: int = 32,
+    edge_repair_v2_min_abs_dev_px: float = 8.0,
+    edge_repair_v2_z_thresh: float = 3.0,
+    edge_repair_v2_max_delta_px: float = 80.0,
+    edge_repair_v2_min_stable_points: int = 12,
+    edge_repair_v2_mode: str = "hybrid",
+    edge_repair_v2_sigma_floor_px: float = 3.0,
+    peak_edge_guard_enabled: bool = False,
+    peak_edge_guard_mode: str = "skip_side",
+    peak_edge_window: int = 16,
+    peak_edge_curvature_thresh: float = 10.0,
+    peak_edge_prominence_thresh: float = 4.5,
+    peak_edge_guard_delta_cap_px: float = 20.0,
 ) -> RunResult:
     """단일 이미지 처리 진입점.
 
@@ -1613,6 +2395,9 @@ def run_single(
             mi,
             pipeline_version=cal_ver,
             axis_mask_margin=axis_mask_margin,
+            mask_b_mag_percentile=float(mask_b_mag_percentile),
+            mask_b_thr_clip_lo=float(mask_b_thr_clip_lo),
+            mask_b_thr_clip_hi=float(mask_b_thr_clip_hi),
             use_ridge_candidates=use_ridge_candidates,
             peak_two_pass=peak_two_pass,
             contrast_aux_settings=contrast_aux_settings,
@@ -1669,6 +2454,97 @@ def run_single(
             roi_upscale_factor=int(roi_upscale_factor),
             roi_upscale_method=str(roi_upscale_method),
             final_export_mode=str(final_export_mode),
+            enable_path_level_recovery_v0=bool(enable_path_level_recovery_v0),
+            path_recovery_monitor_window=int(path_recovery_monitor_window),
+            path_recovery_min_run=int(path_recovery_min_run),
+            path_recovery_local_dp_margin=int(path_recovery_local_dp_margin),
+            path_recovery_anchor_window=int(path_recovery_anchor_window),
+            path_recovery_max_region_len=int(path_recovery_max_region_len),
+            path_recovery_prelockin_guard_col=int(path_recovery_prelockin_guard_col),
+            enable_path_level_recovery_v1=bool(enable_path_level_recovery_v1),
+            path_recovery_v1_monitor_window=int(path_recovery_v1_monitor_window),
+            path_recovery_v1_min_run=int(path_recovery_v1_min_run),
+            path_recovery_v1_local_dp_margin=int(path_recovery_v1_local_dp_margin),
+            path_recovery_v1_anchor_window=int(path_recovery_v1_anchor_window),
+            path_recovery_v1_max_region_len=int(path_recovery_v1_max_region_len),
+            path_recovery_v1_non_bottom_threshold_ratio=float(
+                path_recovery_v1_non_bottom_threshold_ratio
+            ),
+            path_recovery_v1_max_extra_non_bottom_per_col=int(
+                path_recovery_v1_max_extra_non_bottom_per_col
+            ),
+            path_recovery_v1_filtered_pool_topk=int(path_recovery_v1_filtered_pool_topk),
+            path_recovery_v1_prelockin_guard=bool(path_recovery_v1_prelockin_guard),
+            enable_path_level_recovery_v2=bool(enable_path_level_recovery_v2),
+            path_recovery_v2_monitor_window=int(path_recovery_v2_monitor_window),
+            path_recovery_v2_monitor_min_run=int(path_recovery_v2_monitor_min_run),
+            path_recovery_v2_min_bottom_run=int(path_recovery_v2_min_bottom_run),
+            path_recovery_v2_min_island_len=int(path_recovery_v2_min_island_len),
+            path_recovery_v2_anchor_window=int(path_recovery_v2_anchor_window),
+            path_recovery_v2_local_dp_margin=int(path_recovery_v2_local_dp_margin),
+            path_recovery_v2_max_region_len=int(path_recovery_v2_max_region_len),
+            path_recovery_v2_non_bottom_threshold_ratio=float(
+                path_recovery_v2_non_bottom_threshold_ratio
+            ),
+            path_recovery_v2_max_extra_non_bottom_per_col=int(
+                path_recovery_v2_max_extra_non_bottom_per_col
+            ),
+            path_recovery_v2_filtered_pool_topk=int(path_recovery_v2_filtered_pool_topk),
+            path_recovery_v2_escape_entry_penalty=float(path_recovery_v2_escape_entry_penalty),
+            path_recovery_v2_escape_max_jump_px=int(path_recovery_v2_escape_max_jump_px),
+            path_recovery_v2_prelockin_guard=bool(path_recovery_v2_prelockin_guard),
+            path_recovery_v2_require_instability_signal=bool(
+                path_recovery_v2_require_instability_signal
+            ),
+            path_recovery_v2_min_y_separation_px=float(path_recovery_v2_min_y_separation_px),
+            path_recovery_v2_max_internal_y_jump=float(path_recovery_v2_max_internal_y_jump),
+            path_recovery_v2_island_confidence_floor=float(path_recovery_v2_island_confidence_floor),
+            enable_band_midline_candidates=bool(enable_band_midline_candidates),
+            band_midline_window=int(band_midline_window),
+            band_midline_top_percentile=float(band_midline_top_percentile),
+            band_midline_bottom_percentile=float(band_midline_bottom_percentile),
+            band_midline_max_thickness=float(band_midline_max_thickness),
+            band_midline_min_thickness=float(band_midline_min_thickness),
+            band_midline_max_extra_per_column=int(band_midline_max_extra_per_column),
+            band_midline_peak_guard=bool(band_midline_peak_guard),
+            band_midline_min_evidence_pixels=int(band_midline_min_evidence_pixels),
+            band_midline_strict_peak_guard=bool(band_midline_strict_peak_guard),
+            band_midline_peak_guard_curvature_thresh=band_midline_peak_guard_curvature_thresh,
+            band_midline_peak_guard_slope_thresh=band_midline_peak_guard_slope_thresh,
+            band_midline_peak_guard_prominence_thresh=band_midline_peak_guard_prominence_thresh,
+            band_midline_low_priority_mode=bool(band_midline_low_priority_mode),
+            band_midline_confidence_multiplier=float(band_midline_confidence_multiplier),
+            band_midline_score_penalty=float(band_midline_score_penalty),
+            band_midline_flat_tail_only=bool(band_midline_flat_tail_only),
+            band_midline_require_thick_band=bool(band_midline_require_thick_band),
+            band_midline_min_band_thickness_for_flat_tail=float(
+                band_midline_min_band_thickness_for_flat_tail
+            ),
+            enable_peak_apex_candidates=bool(enable_peak_apex_candidates),
+            peak_apex_window=int(peak_apex_window),
+            peak_apex_top_percentile=float(peak_apex_top_percentile),
+            peak_apex_min_prominence=float(peak_apex_min_prominence),
+            peak_apex_min_evidence_pixels=int(peak_apex_min_evidence_pixels),
+            peak_apex_min_top_support=int(peak_apex_min_top_support),
+            peak_apex_max_extra_per_column=int(peak_apex_max_extra_per_column),
+            peak_apex_preserve_final_slot=bool(peak_apex_preserve_final_slot),
+            peak_apex_double_tip_guard=bool(peak_apex_double_tip_guard),
+            enable_edge_trace_repair_v2=bool(enable_edge_trace_repair_v2),
+            edge_repair_v2_edge_n=int(edge_repair_v2_edge_n),
+            edge_repair_v2_stable_gap=int(edge_repair_v2_stable_gap),
+            edge_repair_v2_stable_width=int(edge_repair_v2_stable_width),
+            edge_repair_v2_min_abs_dev_px=float(edge_repair_v2_min_abs_dev_px),
+            edge_repair_v2_z_thresh=float(edge_repair_v2_z_thresh),
+            edge_repair_v2_max_delta_px=float(edge_repair_v2_max_delta_px),
+            edge_repair_v2_min_stable_points=int(edge_repair_v2_min_stable_points),
+            edge_repair_v2_mode=str(edge_repair_v2_mode),
+            edge_repair_v2_sigma_floor_px=float(edge_repair_v2_sigma_floor_px),
+            peak_edge_guard_enabled=bool(peak_edge_guard_enabled),
+            peak_edge_guard_mode=str(peak_edge_guard_mode),
+            peak_edge_window=int(peak_edge_window),
+            peak_edge_curvature_thresh=float(peak_edge_curvature_thresh),
+            peak_edge_prominence_thresh=float(peak_edge_prominence_thresh),
+            peak_edge_guard_delta_cap_px=float(peak_edge_guard_delta_cap_px),
         )
 
     metadata_gt_json = (
@@ -1777,9 +2653,27 @@ def main() -> None:
     parser.add_argument(
         "--axis-mask-margin",
         type=int,
-        default=3,
+        default=15,
         metavar="PX",
-        help="mask_axis_lines 테두리 제거 폭(px), 로드맵 1c (기본 3)",
+        help="mask_axis_lines 테두리 제거 폭(px), 로드맵 1c (기본 15)",
+    )
+    parser.add_argument(
+        "--mask-b-mag-percentile",
+        type=float,
+        default=50.0,
+        help="mask_b Sobel magnitude 분위수 (적응형, 기본 50)",
+    )
+    parser.add_argument(
+        "--mask-b-thr-clip-lo",
+        type=float,
+        default=10.0,
+        help="mask_b 적응형 임계 하한 (기본 10)",
+    )
+    parser.add_argument(
+        "--mask-b-thr-clip-hi",
+        type=float,
+        default=40.0,
+        help="mask_b 적응형 임계 상한 (기본 40)",
     )
     parser.add_argument(
         "--roi-upscale-factor",
@@ -2071,6 +2965,72 @@ def main() -> None:
         help="브리지 트림 후 dp_bridge 최대 비율 상한(예: 0.25)",
     )
     parser.add_argument(
+        "--enable-band-midline-candidates",
+        action="store_true",
+        help="실험용: stroke band robust midline 후보를 final DP 후보에 추가(default off)",
+    )
+    parser.add_argument("--band-midline-window", type=int, default=3, metavar="N")
+    parser.add_argument("--band-midline-top-percentile", type=float, default=20.0, metavar="P")
+    parser.add_argument("--band-midline-bottom-percentile", type=float, default=80.0, metavar="P")
+    parser.add_argument("--band-midline-max-thickness", type=float, default=120.0, metavar="PX")
+    parser.add_argument("--band-midline-min-thickness", type=float, default=3.0, metavar="PX")
+    parser.add_argument("--band-midline-max-extra-per-column", type=int, default=1, metavar="N")
+    parser.add_argument(
+        "--band-midline-peak-guard",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="band_midline 후보를 sharp peak apex 근처에서 억제(default on)",
+    )
+    parser.add_argument("--band-midline-min-evidence-pixels", type=int, default=3, metavar="N")
+    parser.add_argument(
+        "--band-midline-strict-peak-guard",
+        action="store_true",
+        help="실험용: peak apex/slope/shoulder 근처 band_midline 후보를 더 보수적으로 억제",
+    )
+    parser.add_argument("--band-midline-peak-guard-curvature-thresh", type=float, default=None, metavar="PX")
+    parser.add_argument("--band-midline-peak-guard-slope-thresh", type=float, default=None, metavar="PX")
+    parser.add_argument("--band-midline-peak-guard-prominence-thresh", type=float, default=None, metavar="PX")
+    parser.add_argument(
+        "--band-midline-low-priority-mode",
+        action="store_true",
+        help="실험용: band_midline 후보 confidence를 낮춰 peak 후보 선택을 우선",
+    )
+    parser.add_argument("--band-midline-confidence-multiplier", type=float, default=1.0, metavar="F")
+    parser.add_argument("--band-midline-score-penalty", type=float, default=0.0, metavar="F")
+    parser.add_argument(
+        "--band-midline-flat-tail-only",
+        action="store_true",
+        help="실험용: flat/tail 성격의 thick non-peak 구간에서만 band_midline 후보 추가",
+    )
+    parser.add_argument(
+        "--band-midline-require-thick-band",
+        action="store_true",
+        help="실험용: band_midline 후보 추가 시 thick-band 조건 강제",
+    )
+    parser.add_argument("--band-midline-min-band-thickness-for-flat-tail", type=float, default=8.0, metavar="PX")
+    parser.add_argument(
+        "--enable-peak-apex-candidates",
+        action="store_true",
+        help="실험용: sharp peak top-envelope 후보를 raw 후보에 추가(default off)",
+    )
+    parser.add_argument("--peak-apex-window", type=int, default=9, metavar="N")
+    parser.add_argument("--peak-apex-top-percentile", type=float, default=10.0, metavar="P")
+    parser.add_argument("--peak-apex-min-prominence", type=float, default=8.0, metavar="PX")
+    parser.add_argument("--peak-apex-min-evidence-pixels", type=int, default=5, metavar="N")
+    parser.add_argument("--peak-apex-min-top-support", type=int, default=2, metavar="N")
+    parser.add_argument("--peak-apex-max-extra-per-column", type=int, default=1, metavar="N")
+    parser.add_argument(
+        "--peak-apex-preserve-final-slot",
+        action="store_true",
+        help="실험용: final DP 후보에 peak_apex 후보를 column당 최대 1개 보존",
+    )
+    parser.add_argument(
+        "--peak-apex-double-tip-guard",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="peak_apex 후보에서 false double-tip artifact 가능 구간을 억제(default on)",
+    )
+    parser.add_argument(
         "--debug-preserve-gt-near-final-candidates",
         action="store_true",
         help="진단용: GT-near raw 후보를 final 후보에 강제 보존(운영 기본 off)",
@@ -2227,6 +3187,167 @@ def main() -> None:
         action="store_true",
         help="high_entropy_many_cands에 conf_margin < threshold 추가 요구(실험)",
     )
+    parser.add_argument(
+        "--enable-path-level-recovery-v0",
+        action="store_true",
+        help="실험: monitor-flagged bottom-run 구간에서만 국소 재경로 선택 (기본 off)",
+    )
+    parser.add_argument("--path-recovery-monitor-window", type=int, default=51, metavar="N")
+    parser.add_argument("--path-recovery-min-run", type=int, default=80, metavar="N")
+    parser.add_argument("--path-recovery-local-dp-margin", type=int, default=120, metavar="PX")
+    parser.add_argument("--path-recovery-anchor-window", type=int, default=24, metavar="N")
+    parser.add_argument("--path-recovery-max-region-len", type=int, default=1500, metavar="N")
+    parser.add_argument("--path-recovery-prelockin-guard-col", type=int, default=640, metavar="N")
+    parser.add_argument(
+        "--enable-path-level-recovery-v1",
+        action="store_true",
+        help="실험: monitor risk 구간에 filtered non-bottom 후보를 합쳐 국소 DP 재선택 (기본 off; ON이면 v0보다 우선)",
+    )
+    parser.add_argument("--path-recovery-v1-monitor-window", type=int, default=51, metavar="N")
+    parser.add_argument("--path-recovery-v1-min-run", type=int, default=80, metavar="N")
+    parser.add_argument("--path-recovery-v1-local-dp-margin", type=int, default=120, metavar="PX")
+    parser.add_argument("--path-recovery-v1-anchor-window", type=int, default=24, metavar="N")
+    parser.add_argument("--path-recovery-v1-max-region-len", type=int, default=1500, metavar="N")
+    parser.add_argument(
+        "--path-recovery-v1-non-bottom-threshold-ratio",
+        type=float,
+        default=0.84,
+        metavar="R",
+    )
+    parser.add_argument(
+        "--path-recovery-v1-max-extra-non-bottom-per-col",
+        type=int,
+        default=4,
+        metavar="N",
+    )
+    parser.add_argument("--path-recovery-v1-filtered-pool-topk", type=int, default=16, metavar="N")
+    parser.add_argument(
+        "--path-recovery-v1-prelockin-guard",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="prelockin harmful 회피 가드 (monitor+selected_y만 사용)",
+    )
+    parser.add_argument(
+        "--enable-path-level-recovery-v2",
+        action="store_true",
+        help="실험: two-state branch escape path recovery v2 (기본 off; ON이면 v1/v0 미실행)",
+    )
+    parser.add_argument("--path-recovery-v2-monitor-window", type=int, default=51, metavar="N")
+    parser.add_argument("--path-recovery-v2-monitor-min-run", type=int, default=80, metavar="N")
+    parser.add_argument("--path-recovery-v2-min-bottom-run", type=int, default=300, metavar="N")
+    parser.add_argument("--path-recovery-v2-min-island-len", type=int, default=24, metavar="N")
+    parser.add_argument("--path-recovery-v2-anchor-window", type=int, default=24, metavar="N")
+    parser.add_argument("--path-recovery-v2-local-dp-margin", type=int, default=120, metavar="PX")
+    parser.add_argument("--path-recovery-v2-max-region-len", type=int, default=1500, metavar="N")
+    parser.add_argument(
+        "--path-recovery-v2-non-bottom-threshold-ratio",
+        type=float,
+        default=0.84,
+        metavar="R",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-max-extra-non-bottom-per-col",
+        type=int,
+        default=4,
+        metavar="N",
+    )
+    parser.add_argument("--path-recovery-v2-filtered-pool-topk", type=int, default=16, metavar="N")
+    parser.add_argument(
+        "--path-recovery-v2-escape-entry-penalty",
+        type=float,
+        default=0.35,
+        metavar="R",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-escape-max-jump-px",
+        type=int,
+        default=900,
+        metavar="PX",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-prelockin-guard",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="v2 prelockin harmful 회피 가드 (monitor+selected_y만 사용)",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-require-instability-signal",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="v2: trend/jump/top1 divergence 등 불안정 신호 필수",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-min-y-separation-px",
+        type=float,
+        default=48.0,
+        metavar="PX",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-max-internal-y-jump",
+        type=float,
+        default=34.0,
+        metavar="PX",
+        help="non-bottom island 내부 y 연속차 상한 (픽셀, 기본 34=v2 이전 하드코드와 동일)",
+    )
+    parser.add_argument(
+        "--path-recovery-v2-island-confidence-floor",
+        type=float,
+        default=0.08,
+        metavar="R",
+        help="island 후보 최대 신뢰도 하한 (apply 단계)",
+    )
+    parser.add_argument(
+        "--enable-edge-trace-repair-v2",
+        action="store_true",
+        help="ROI 좌/우 끝 edge_n 열만 이상 스파이크 보정 (기본 off)",
+    )
+    parser.add_argument("--edge-repair-v2-edge-n", type=int, default=5, metavar="N")
+    parser.add_argument("--edge-repair-v2-stable-gap", type=int, default=5, metavar="N")
+    parser.add_argument("--edge-repair-v2-stable-width", type=int, default=32, metavar="N")
+    parser.add_argument("--edge-repair-v2-min-abs-dev-px", type=float, default=8.0, metavar="PX")
+    parser.add_argument("--edge-repair-v2-z-thresh", type=float, default=3.0, metavar="Z")
+    parser.add_argument("--edge-repair-v2-max-delta-px", type=float, default=80.0, metavar="PX")
+    parser.add_argument("--edge-repair-v2-min-stable-points", type=int, default=12, metavar="N")
+    parser.add_argument(
+        "--edge-repair-v2-mode",
+        type=str,
+        default="hybrid",
+        choices=["clamp_to_stable_median", "linear_extrapolate_from_stable", "hybrid"],
+        metavar="MODE",
+    )
+    parser.add_argument("--edge-repair-v2-sigma-floor-px", type=float, default=3.0, metavar="PX")
+    parser.add_argument(
+        "--edge-repair-v2-peak-edge-guard",
+        action="store_true",
+        help="Edge repair 전 peak-like edge 구간이면 skip_side 또는 cap_delta (기본 off)",
+    )
+    parser.add_argument(
+        "--edge-repair-v2-peak-edge-guard-mode",
+        type=str,
+        default="skip_side",
+        choices=["skip_side", "cap_delta"],
+        metavar="MODE",
+    )
+    parser.add_argument("--edge-repair-v2-peak-edge-window", type=int, default=16, metavar="N")
+    parser.add_argument(
+        "--edge-repair-v2-peak-edge-curvature-thresh",
+        type=float,
+        default=10.0,
+        metavar="PX",
+    )
+    parser.add_argument(
+        "--edge-repair-v2-peak-edge-prominence-thresh",
+        type=float,
+        default=4.5,
+        metavar="S",
+    )
+    parser.add_argument(
+        "--edge-repair-v2-peak-edge-guard-delta-cap-px",
+        type=float,
+        default=20.0,
+        metavar="PX",
+        help="guard_mode=cap_delta 일 때 추가 클램프 상한",
+    )
     args = parser.parse_args()
 
     if args.validate_only:
@@ -2314,6 +3435,9 @@ def main() -> None:
         tune_json=args.tune_json,
         allow_experimental_v2=args.allow_experimental_v2,
         axis_mask_margin=args.axis_mask_margin,
+        mask_b_mag_percentile=float(args.mask_b_mag_percentile),
+        mask_b_thr_clip_lo=float(args.mask_b_thr_clip_lo),
+        mask_b_thr_clip_hi=float(args.mask_b_thr_clip_hi),
         use_ridge_candidates=args.use_ridge_candidates,
         peak_two_pass=not args.peak_single_pass,
         contrast_aux_settings=caf,
@@ -2373,6 +3497,36 @@ def main() -> None:
         candidate_final_continuity_window=int(args.candidate_final_continuity_window),
         candidate_final_continuity_max_jump=int(args.candidate_final_continuity_max_jump),
         candidate_final_max_dp_bridge_frac=args.candidate_final_max_dp_bridge_frac,
+        enable_band_midline_candidates=bool(args.enable_band_midline_candidates),
+        band_midline_window=int(args.band_midline_window),
+        band_midline_top_percentile=float(args.band_midline_top_percentile),
+        band_midline_bottom_percentile=float(args.band_midline_bottom_percentile),
+        band_midline_max_thickness=float(args.band_midline_max_thickness),
+        band_midline_min_thickness=float(args.band_midline_min_thickness),
+        band_midline_max_extra_per_column=int(args.band_midline_max_extra_per_column),
+        band_midline_peak_guard=bool(args.band_midline_peak_guard),
+        band_midline_min_evidence_pixels=int(args.band_midline_min_evidence_pixels),
+        band_midline_strict_peak_guard=bool(args.band_midline_strict_peak_guard),
+        band_midline_peak_guard_curvature_thresh=args.band_midline_peak_guard_curvature_thresh,
+        band_midline_peak_guard_slope_thresh=args.band_midline_peak_guard_slope_thresh,
+        band_midline_peak_guard_prominence_thresh=args.band_midline_peak_guard_prominence_thresh,
+        band_midline_low_priority_mode=bool(args.band_midline_low_priority_mode),
+        band_midline_confidence_multiplier=float(args.band_midline_confidence_multiplier),
+        band_midline_score_penalty=float(args.band_midline_score_penalty),
+        band_midline_flat_tail_only=bool(args.band_midline_flat_tail_only),
+        band_midline_require_thick_band=bool(args.band_midline_require_thick_band),
+        band_midline_min_band_thickness_for_flat_tail=float(
+            args.band_midline_min_band_thickness_for_flat_tail
+        ),
+        enable_peak_apex_candidates=bool(args.enable_peak_apex_candidates),
+        peak_apex_window=int(args.peak_apex_window),
+        peak_apex_top_percentile=float(args.peak_apex_top_percentile),
+        peak_apex_min_prominence=float(args.peak_apex_min_prominence),
+        peak_apex_min_evidence_pixels=int(args.peak_apex_min_evidence_pixels),
+        peak_apex_min_top_support=int(args.peak_apex_min_top_support),
+        peak_apex_max_extra_per_column=int(args.peak_apex_max_extra_per_column),
+        peak_apex_preserve_final_slot=bool(args.peak_apex_preserve_final_slot),
+        peak_apex_double_tip_guard=bool(args.peak_apex_double_tip_guard),
         debug_preserve_gt_near_final_candidates=bool(args.debug_preserve_gt_near_final_candidates),
         model_assist_settings=mas,
         oracle_rerank_settings=orac,
@@ -2392,6 +3546,67 @@ def main() -> None:
             if args.selective_oracle_rerank_gt
             else (str(args.oracle_rerank_gt) if args.oracle_rerank_gt else None)
         ),
+        enable_path_level_recovery_v0=bool(args.enable_path_level_recovery_v0),
+        path_recovery_monitor_window=int(args.path_recovery_monitor_window),
+        path_recovery_min_run=int(args.path_recovery_min_run),
+        path_recovery_local_dp_margin=int(args.path_recovery_local_dp_margin),
+        path_recovery_anchor_window=int(args.path_recovery_anchor_window),
+        path_recovery_max_region_len=int(args.path_recovery_max_region_len),
+        path_recovery_prelockin_guard_col=int(args.path_recovery_prelockin_guard_col),
+        enable_path_level_recovery_v1=bool(args.enable_path_level_recovery_v1),
+        path_recovery_v1_monitor_window=int(args.path_recovery_v1_monitor_window),
+        path_recovery_v1_min_run=int(args.path_recovery_v1_min_run),
+        path_recovery_v1_local_dp_margin=int(args.path_recovery_v1_local_dp_margin),
+        path_recovery_v1_anchor_window=int(args.path_recovery_v1_anchor_window),
+        path_recovery_v1_max_region_len=int(args.path_recovery_v1_max_region_len),
+        path_recovery_v1_non_bottom_threshold_ratio=float(
+            args.path_recovery_v1_non_bottom_threshold_ratio
+        ),
+        path_recovery_v1_max_extra_non_bottom_per_col=int(
+            args.path_recovery_v1_max_extra_non_bottom_per_col
+        ),
+        path_recovery_v1_filtered_pool_topk=int(args.path_recovery_v1_filtered_pool_topk),
+        path_recovery_v1_prelockin_guard=bool(args.path_recovery_v1_prelockin_guard),
+        enable_path_level_recovery_v2=bool(args.enable_path_level_recovery_v2),
+        path_recovery_v2_monitor_window=int(args.path_recovery_v2_monitor_window),
+        path_recovery_v2_monitor_min_run=int(args.path_recovery_v2_monitor_min_run),
+        path_recovery_v2_min_bottom_run=int(args.path_recovery_v2_min_bottom_run),
+        path_recovery_v2_min_island_len=int(args.path_recovery_v2_min_island_len),
+        path_recovery_v2_anchor_window=int(args.path_recovery_v2_anchor_window),
+        path_recovery_v2_local_dp_margin=int(args.path_recovery_v2_local_dp_margin),
+        path_recovery_v2_max_region_len=int(args.path_recovery_v2_max_region_len),
+        path_recovery_v2_non_bottom_threshold_ratio=float(
+            args.path_recovery_v2_non_bottom_threshold_ratio
+        ),
+        path_recovery_v2_max_extra_non_bottom_per_col=int(
+            args.path_recovery_v2_max_extra_non_bottom_per_col
+        ),
+        path_recovery_v2_filtered_pool_topk=int(args.path_recovery_v2_filtered_pool_topk),
+        path_recovery_v2_escape_entry_penalty=float(args.path_recovery_v2_escape_entry_penalty),
+        path_recovery_v2_escape_max_jump_px=int(args.path_recovery_v2_escape_max_jump_px),
+        path_recovery_v2_prelockin_guard=bool(args.path_recovery_v2_prelockin_guard),
+        path_recovery_v2_require_instability_signal=bool(
+            args.path_recovery_v2_require_instability_signal
+        ),
+        path_recovery_v2_min_y_separation_px=float(args.path_recovery_v2_min_y_separation_px),
+        path_recovery_v2_max_internal_y_jump=float(args.path_recovery_v2_max_internal_y_jump),
+        path_recovery_v2_island_confidence_floor=float(args.path_recovery_v2_island_confidence_floor),
+        enable_edge_trace_repair_v2=bool(args.enable_edge_trace_repair_v2),
+        edge_repair_v2_edge_n=int(args.edge_repair_v2_edge_n),
+        edge_repair_v2_stable_gap=int(args.edge_repair_v2_stable_gap),
+        edge_repair_v2_stable_width=int(args.edge_repair_v2_stable_width),
+        edge_repair_v2_min_abs_dev_px=float(args.edge_repair_v2_min_abs_dev_px),
+        edge_repair_v2_z_thresh=float(args.edge_repair_v2_z_thresh),
+        edge_repair_v2_max_delta_px=float(args.edge_repair_v2_max_delta_px),
+        edge_repair_v2_min_stable_points=int(args.edge_repair_v2_min_stable_points),
+        edge_repair_v2_mode=str(args.edge_repair_v2_mode),
+        edge_repair_v2_sigma_floor_px=float(args.edge_repair_v2_sigma_floor_px),
+        peak_edge_guard_enabled=bool(args.edge_repair_v2_peak_edge_guard),
+        peak_edge_guard_mode=str(args.edge_repair_v2_peak_edge_guard_mode),
+        peak_edge_window=int(args.edge_repair_v2_peak_edge_window),
+        peak_edge_curvature_thresh=float(args.edge_repair_v2_peak_edge_curvature_thresh),
+        peak_edge_prominence_thresh=float(args.edge_repair_v2_peak_edge_prominence_thresh),
+        peak_edge_guard_delta_cap_px=float(args.edge_repair_v2_peak_edge_guard_delta_cap_px),
     )
     print(f"[DONE] confidence={result.confidence}, warnings={len(result.warnings)}")
     print(f"  -> {args.output_json_path}")

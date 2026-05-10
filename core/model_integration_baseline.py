@@ -1,9 +1,14 @@
 """
 모델 도입 판단용 기준선(B0) 및 진단 참조(B1) 경로 단일 정의.
 
-B0: 수정 실험 전 최고 성능 rule-only 코드 스냅샷 (공식 baseline).
+B0: 수정 실험 전 최고 성능 rule-only 코드 스냅샷 (배포·회귀 비교용 코드 베이스).
 B1: 진단·ablation 산출물 등 참고용 (공식 baseline 아님).
 M1: 모델 보조 도입 후보 — 반드시 B0 대비 개선이 입증되어야 통합 가능.
+
+수치·제품 기준선(성능): ROI 2× 업스케일 + final_export_mode=highres 인 출력
+(`export_points_highres` vs source_numeric)이 현재까지 최고 성능이므로,
+새 실험·튜닝의 성공 여부는 우선 이 트랙의 지표로 판단한다.
+1× eval_grid 트랙은 highres 대비 레거시·퇴행 참고용으로만 사용한다.
 """
 
 from __future__ import annotations

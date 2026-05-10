@@ -118,7 +118,7 @@ def _run_batch(
     max_samples: int,
     pipeline: str,
     *,
-    axis_mask_margin: int = 3,
+    axis_mask_margin: int = 15,
     use_ridge_candidates: bool = False,
     peak_single_pass: bool = False,
 ) -> None:
@@ -136,7 +136,7 @@ def _run_batch(
     ]
     if pipeline == "v2_experimental":
         cmd.append("--allow_experimental_v2")
-    if axis_mask_margin != 3:
+    if axis_mask_margin != 15:
         cmd.extend(["--axis-mask-margin", str(axis_mask_margin)])
     if use_ridge_candidates:
         cmd.append("--use-ridge-candidates")
@@ -282,9 +282,9 @@ def main() -> None:
     pb.add_argument(
         "--axis-mask-margin",
         type=int,
-        default=3,
+        default=15,
         metavar="PX",
-        help="v1_1 배치: mask_axis_lines margin (기본 3, 로드맵 1c)",
+        help="v1_1 배치: mask_axis_lines margin (기본 15, 로드맵 1c)",
     )
     pb.add_argument(
         "--use-ridge-candidates",

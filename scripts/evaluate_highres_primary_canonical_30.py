@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Run and evaluate highres-primary source_numeric metrics on canonical 30.
 
-The script reads paths only from data/test_canonical_30/manifest.csv. It runs
-baseline_1x_eval_grid and upscale_2x_highres for all valid canonical samples.
-The legacy 950 eval_grid 2x run is optional because it is not a primary
-acceptance signal.
+Official performance baseline: upscale_2x_highres (ROI 2×, --final-export-mode highres).
+That track is the best-performing product output; new work should be judged mainly on
+highres_* metrics vs source_numeric.json.
+
+The script also runs baseline_1x_eval_grid (1×, eval_grid) as a legacy reference arm
+to detect regression vs the old eval grid — not as the primary baseline.
+
+Reads paths only from data/test_canonical_30/manifest.csv.
+Optional: legacy 950 eval_grid 2× run (--run-legacy-eval-grid); not a primary signal.
 """
 
 from __future__ import annotations
@@ -206,6 +211,10 @@ def run_local_cmd(
     pipeline: str,
     roi_upscale_factor: int,
     final_export_mode: str,
+    axis_mask_margin: int = 15,
+    mask_b_mag_percentile: float = 50.0,
+    mask_b_thr_clip_lo: float = 10.0,
+    mask_b_thr_clip_hi: float = 40.0,
 ) -> List[str]:
     return [
         sys.executable,
@@ -226,6 +235,14 @@ def run_local_cmd(
         "lanczos",
         "--final-export-mode",
         final_export_mode,
+        "--axis-mask-margin",
+        str(int(axis_mask_margin)),
+        "--mask-b-mag-percentile",
+        str(float(mask_b_mag_percentile)),
+        "--mask-b-thr-clip-lo",
+        str(float(mask_b_thr_clip_lo)),
+        "--mask-b-thr-clip-hi",
+        str(float(mask_b_thr_clip_hi)),
     ]
 
 
@@ -261,6 +278,11 @@ def process_sample(
     pipeline: str,
     dry_run: bool,
     run_legacy_eval_grid: bool,
+    *,
+    axis_mask_margin: int = 15,
+    mask_b_mag_percentile: float = 50.0,
+    mask_b_thr_clip_lo: float = 10.0,
+    mask_b_thr_clip_hi: float = 40.0,
 ) -> Optional[Dict[str, Any]]:
     sample_key = f"{row['domain']}_{row['sample_id']}"
     sample_dir = out_root / sample_key
@@ -291,6 +313,10 @@ def process_sample(
             pipeline=pipeline,
             roi_upscale_factor=factor,
             final_export_mode=final_mode,
+            axis_mask_margin=int(axis_mask_margin),
+            mask_b_mag_percentile=float(mask_b_mag_percentile),
+            mask_b_thr_clip_lo=float(mask_b_thr_clip_lo),
+            mask_b_thr_clip_hi=float(mask_b_thr_clip_hi),
         )
         if result_json.is_file():
             print(f"[resume] {sample_key}/{mode}")
@@ -474,6 +500,10 @@ def main() -> None:
     ap.add_argument("--resume", action="store_true", help="Use existing output root and skip completed result JSONs")
     ap.add_argument("--workers", type=int, default=1, help="Number of sample-level workers")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--axis-mask-margin", type=int, default=15, help="Forwarded to run_local (mask_axis_lines px before upscale scale)")
+    ap.add_argument("--mask-b-mag-percentile", type=float, default=50.0)
+    ap.add_argument("--mask-b-thr-clip-lo", type=float, default=10.0)
+    ap.add_argument("--mask-b-thr-clip-hi", type=float, default=40.0)
     args = ap.parse_args()
 
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
@@ -500,6 +530,10 @@ def main() -> None:
                 pipeline=str(args.pipeline),
                 dry_run=bool(args.dry_run),
                 run_legacy_eval_grid=bool(args.run_legacy_eval_grid),
+                axis_mask_margin=int(args.axis_mask_margin),
+                mask_b_mag_percentile=float(args.mask_b_mag_percentile),
+                mask_b_thr_clip_lo=float(args.mask_b_thr_clip_lo),
+                mask_b_thr_clip_hi=float(args.mask_b_thr_clip_hi),
             )
             if result is not None:
                 return result
@@ -560,6 +594,10 @@ def main() -> None:
                 else "legacy_downscale_diagnostic_skipped_cost"
             ),
             "valid_executed_sample_count": totals["valid_executed_sample_count"],
+            "axis_mask_margin": int(args.axis_mask_margin),
+            "mask_b_mag_percentile": float(args.mask_b_mag_percentile),
+            "mask_b_thr_clip_lo": float(args.mask_b_thr_clip_lo),
+            "mask_b_thr_clip_hi": float(args.mask_b_thr_clip_hi),
         },
         "totals": totals,
         "domain_summary": domain_summary,
@@ -627,7 +665,8 @@ def main() -> None:
         [
             "",
             "## Current Best Status",
-            "This run determines whether highres-primary is current best on canonical 30 under source_numeric metrics.",
+            "Primary baseline = 2× highres vs source_numeric (highres_* columns).",
+            "The `improved` flag is still defined as highres beating the 1× eval_grid arm (legacy reference), not as the definition of baseline.",
             "",
             "## Outputs",
             f"- Summary CSV: `{rel(summary_csv)}`",

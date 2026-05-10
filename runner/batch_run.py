@@ -79,9 +79,27 @@ def main() -> None:
     parser.add_argument(
         "--axis-mask-margin",
         type=int,
-        default=3,
+        default=15,
         metavar="PX",
-        help="v1_1: mask_axis_lines margin (기본 3)",
+        help="v1_1: mask_axis_lines margin (기본 15)",
+    )
+    parser.add_argument(
+        "--mask-b-mag-percentile",
+        type=float,
+        default=50.0,
+        help="mask_b Sobel 분위수 (기본 50)",
+    )
+    parser.add_argument(
+        "--mask-b-thr-clip-lo",
+        type=float,
+        default=10.0,
+        help="mask_b 임계 하한 (기본 10)",
+    )
+    parser.add_argument(
+        "--mask-b-thr-clip-hi",
+        type=float,
+        default=40.0,
+        help="mask_b 임계 상한 (기본 40)",
     )
     parser.add_argument(
         "--use-ridge-candidates",
@@ -305,6 +323,9 @@ def main() -> None:
                 tune_json=args.tune_json,
                 allow_experimental_v2=args.allow_experimental_v2,
                 axis_mask_margin=args.axis_mask_margin,
+                mask_b_mag_percentile=float(args.mask_b_mag_percentile),
+                mask_b_thr_clip_lo=float(args.mask_b_thr_clip_lo),
+                mask_b_thr_clip_hi=float(args.mask_b_thr_clip_hi),
                 use_ridge_candidates=args.use_ridge_candidates,
                 peak_two_pass=not args.peak_single_pass,
                 contrast_aux_settings=caf,
