@@ -187,7 +187,7 @@ def _downscale_series_to_original_roi(
     y_src = np.asarray(y_values, dtype=np.float64)
     v_src = np.asarray(valid_mask, dtype=np.float64)
     x_tgt = np.arange(int(original_roi_w), dtype=np.float64) * float(factor)
-    y_tgt = np.interp(x_tgt, x_src, y_src)
+    y_tgt = np.interp(x_tgt, x_src, y_src) / float(factor)   # 2x px → 1x px
     v_tgt = np.interp(x_tgt, x_src, v_src) >= 0.5
     return list(range(int(original_roi_w))), y_tgt.astype(np.float64), v_tgt
 
@@ -1794,7 +1794,7 @@ def run_pipeline(
         upscale_factor=roi_up_factor,
     )
     peaks_overlay_img = render_peaks_overlay(
-        roi, columns, y_smoothed, valid_mask,
+        roi, columns_numeric, y_smoothed_numeric, valid_mask_numeric,
         peak_result["peaks"], peak_result["major_peaks"],
         upscale_factor=roi_up_factor,
     )

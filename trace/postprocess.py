@@ -583,15 +583,17 @@ def render_peaks_overlay(
     h, w = overlay.shape[:2]
 
     # Draw smoothed trace — thicker line for upscaled images
+    # columns/y_smoothed are in 1x pixel space; multiply by upscale_factor for the ROI canvas.
     trace_thickness = max(1, upscale_factor)
     for i, col in enumerate(columns):
-        if col >= w or i >= len(valid) or not valid[i]:
+        col_px = int(round(col * upscale_factor))
+        if col_px >= w or i >= len(valid) or not valid[i]:
             continue
-        sy = int(round(y_smoothed[i]))
+        sy = int(round(y_smoothed[i] * upscale_factor))
         for dt in range(-trace_thickness + 1, trace_thickness):
             yy = sy + dt
-            if 0 <= yy < h and 0 <= col < w:
-                overlay[yy, col] = [0, 200, 0]
+            if 0 <= yy < h and 0 <= col_px < w:
+                overlay[yy, col_px] = [0, 200, 0]
 
     major_indices = {p["index"] for p in major_peaks}
 
@@ -599,10 +601,10 @@ def render_peaks_overlay(
         idx = pk["index"]
         if idx >= len(columns):
             continue
-        col = columns[idx]
-        if col >= w:
+        col_px = int(round(columns[idx] * upscale_factor))
+        if col_px >= w:
             continue
-        sy = int(round(y_smoothed[idx]))
+        sy = int(round(y_smoothed[idx] * upscale_factor))
         if not (0 <= sy < h):
             continue
 
@@ -613,7 +615,7 @@ def render_peaks_overlay(
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
                 if dy * dy + dx * dx <= radius * radius:
-                    yy, xx = sy + dy, col + dx
+                    yy, xx = sy + dy, col_px + dx
                     if 0 <= yy < h and 0 <= xx < w:
                         overlay[yy, xx] = color
 
