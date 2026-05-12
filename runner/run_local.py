@@ -1558,6 +1558,14 @@ def run_pipeline(
 
     x_map_dbg = build_x_mapping(mi.x_axis_points, mi.x_axis_values, mi.plot_box)
     y_map_dbg = build_y_mapping(mi.y_axis_points, mi.y_axis_values, mi.plot_box)
+    # For debug rendering on the upscaled ROI, scale the maps so that
+    # value_to_pixel_x/y returns upscaled pixel coordinates.
+    if roi_up_factor > 1:
+        x_map_dbg_render = dict(x_map_dbg, scale=x_map_dbg["scale"] / roi_up_factor)
+        y_map_dbg_render = dict(y_map_dbg, scale=y_map_dbg["scale"] / roi_up_factor)
+    else:
+        x_map_dbg_render = x_map_dbg
+        y_map_dbg_render = y_map_dbg
     tt_eval = numeric["two_theta_values"]
     ii_eval = numeric["intensities"]
     export_rs = getattr(mi, "export_resample_points", None)
@@ -1782,7 +1790,7 @@ def run_pipeline(
 
     smoothed_trace_img = render_smoothed_trace(roi, columns, y_filled, y_smoothed, valid_mask)
     numeric_curve_peaks_roi = render_numeric_peaks_on_roi(
-        roi, x_map_dbg, y_map_dbg, numeric.get("peaks_numeric_curve", []),
+        roi, x_map_dbg_render, y_map_dbg_render, numeric.get("peaks_numeric_curve", []),
     )
     peaks_overlay_img = render_peaks_overlay(
         roi, columns, y_smoothed, valid_mask,
