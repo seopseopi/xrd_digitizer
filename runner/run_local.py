@@ -1791,10 +1791,12 @@ def run_pipeline(
     smoothed_trace_img = render_smoothed_trace(roi, columns, y_filled, y_smoothed, valid_mask)
     numeric_curve_peaks_roi = render_numeric_peaks_on_roi(
         roi, x_map_dbg_render, y_map_dbg_render, numeric.get("peaks_numeric_curve", []),
+        upscale_factor=roi_up_factor,
     )
     peaks_overlay_img = render_peaks_overlay(
         roi, columns, y_smoothed, valid_mask,
         peak_result["peaks"], peak_result["major_peaks"],
+        upscale_factor=roi_up_factor,
     )
 
     branch_compare_img = render_branch_compare(

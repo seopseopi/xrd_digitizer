@@ -38,6 +38,8 @@ def render_numeric_peaks_on_roi(
 
     max_marks: int = 220,
 
+    upscale_factor: int = 1,
+
 ) -> np.ndarray:
 
     """ROI(행=h, 열=w) 위에 자홍색 십자로 피크 위치 표시."""
@@ -52,7 +54,7 @@ def render_numeric_peaks_on_roi(
 
         base = np.asarray(roi).astype(np.uint8).copy()
 
-
+    arm = max(6, 12 * upscale_factor)  # 십자 팔 길이
 
     for p in peaks[:max_marks]:
 
@@ -64,7 +66,7 @@ def render_numeric_peaks_on_roi(
 
             continue
 
-        for d in range(-1, 2):
+        for d in range(-arm, arm + 1):
 
             if 0 <= cx + d < w:
 

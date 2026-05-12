@@ -574,21 +574,26 @@ def render_peaks_overlay(
     valid: np.ndarray,
     peaks: List[dict],
     major_peaks: List[dict],
+    *,
+    upscale_factor: int = 1,
 ) -> np.ndarray:
     """peaks_overlay.png: smoothed curve + all peaks (yellow) + major peaks (red)."""
     overlay = roi.copy() if roi.ndim == 3 else np.stack([roi] * 3, axis=-1)
     overlay = overlay.astype(np.uint8)
     h, w = overlay.shape[:2]
 
+    # Draw smoothed trace — thicker line for upscaled images
+    trace_thickness = max(1, upscale_factor)
     for i, col in enumerate(columns):
         if col >= w or i >= len(valid) or not valid[i]:
             continue
         sy = int(round(y_smoothed[i]))
-        if 0 <= sy < h:
-            overlay[sy, col] = [0, 200, 0]
+        for dt in range(-trace_thickness + 1, trace_thickness):
+            yy = sy + dt
+            if 0 <= yy < h and 0 <= col < w:
+                overlay[yy, col] = [0, 200, 0]
 
     major_indices = {p["index"] for p in major_peaks}
-    all_peak_indices = {p["index"] for p in peaks}
 
     for pk in peaks:
         idx = pk["index"]
@@ -603,7 +608,7 @@ def render_peaks_overlay(
 
         is_major = idx in major_indices
         color = [255, 50, 50] if is_major else [255, 220, 50]
-        radius = 3 if is_major else 2
+        radius = (6 if is_major else 4) * upscale_factor
 
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
