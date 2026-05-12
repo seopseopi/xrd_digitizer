@@ -160,6 +160,14 @@ def main() -> None:
     parser.add_argument("--peak-apex-roi-refine", action="store_true")
     parser.add_argument("--peak-apex-roi-radius", type=int, default=5)
     parser.add_argument(
+        "--roi-upscale-factor",
+        type=int,
+        default=1,
+        choices=[1, 2],
+        metavar="N",
+        help="ROI upscale factor (1=default, 2=2x)",
+    )
+    parser.add_argument(
         "--oracle-rerank-gt",
         type=str,
         default=None,
@@ -340,6 +348,7 @@ def main() -> None:
                 selective_oracle_settings=s_orac,
                 use_peak_apex_roi_refine=bool(args.peak_apex_roi_refine),
                 peak_apex_roi_radius=int(args.peak_apex_roi_radius),
+                roi_upscale_factor=int(args.roi_upscale_factor),
             )
             ok += 1
             print(f"[OK] {sid}")
