@@ -2392,7 +2392,7 @@ def run_single(
             "pipeline='v2'는 롤백 정책으로 잠겨 있습니다. "
             "운영은 v1_1(v1.1)을 사용하고, 실험은 v2_experimental + --allow_experimental_v2를 사용하세요."
         )
-    sample_stem = Path(output_json_path).stem
+    sample_stem = Path(output_json_path).stem if output_json_path is not None else Path(image_path).stem
 
     if pl == "v2_experimental":
         if not allow_experimental_v2:
@@ -2565,7 +2565,7 @@ def run_single(
     if isinstance(getattr(result, "export_metadata", None), dict):
         result.export_metadata.update(
             {
-                "sample_id": str(manual_meta.get("sample_id", "") or Path(output_json_path).stem.replace("_result", "")),
+                "sample_id": str(manual_meta.get("sample_id", "") or (Path(output_json_path).stem.replace("_result", "") if output_json_path is not None else Path(image_path).stem)),
                 "domain": str(manual_meta.get("domain", "") or ""),
                 "input_image": str(image_path),
                 "manual_json": str(manual_inputs_path),
