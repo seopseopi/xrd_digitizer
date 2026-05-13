@@ -2589,21 +2589,24 @@ def run_single(
             stage_timings_obj = st
 
     t_save = time.perf_counter()
-    save_result_json(result, output_json_path)
+    if output_json_path is not None:
+        save_result_json(result, output_json_path)
     if stage_timings_obj is not None:
         stage_timings_obj["result_export_sec"] = round(time.perf_counter() - t_save, 6)
 
     t_save = time.perf_counter()
-    save_debug_files(debug_data, debug_dir)
+    if debug_dir is not None:
+        save_debug_files(debug_data, debug_dir)
     if stage_timings_obj is not None:
         stage_timings_obj["debug_dump_sec"] = round(time.perf_counter() - t_save, 6)
         stage_timings_obj["total_run_sec"] = round(time.perf_counter() - total_run_t0, 6)
-        debug_json_path = Path(debug_dir) / "debug.json"
-        if debug_json_path.is_file():
-            with debug_json_path.open("w", encoding="utf-8") as f:
-                json.dump(debug_data["debug.json"], f, ensure_ascii=False, indent=2)
+        if debug_dir is not None:
+            debug_json_path = Path(debug_dir) / "debug.json"
+            if debug_json_path.is_file():
+                with debug_json_path.open("w", encoding="utf-8") as f:
+                    json.dump(debug_data["debug.json"], f, ensure_ascii=False, indent=2)
 
-    if pl != "v2_experimental":
+    if pl != "v2_experimental" and debug_dir is not None:
         arm = "experiment" if contrast_aux_settings.use_contrast_aux else "baseline"
         print(
             f"[contrast_aux_ab] arm={arm} sample={sample_stem} "
@@ -2645,6 +2648,17 @@ def main() -> None:
     parser.add_argument("--manual_inputs_path", type=str, required=True)
     parser.add_argument("--output_json_path", type=str, default=None)
     parser.add_argument("--debug_dir", type=str, default=None)
+    parser.add_argument(
+        "--stdout",
+        action="store_true",
+        help="결과 JSON을 파일 대신 stdout으로 출력 (--output_json_path 없이 사용 가능)",
+    )
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        dest="no_debug",
+        help="debug 이미지·JSON 저장 생략 (--debug_dir 없이 사용 가능)",
+    )
     parser.add_argument("--validate_only", action="store_true",
                         help="§10.6: validate manual inputs without running pipeline")
     parser.add_argument(
@@ -3364,8 +3378,10 @@ def main() -> None:
         ok = validate_only(args.image_path, args.manual_inputs_path)
         sys.exit(0 if ok else 1)
 
-    if not args.output_json_path or not args.debug_dir:
-        parser.error("--output_json_path and --debug_dir required when not using --validate_only")
+    if not args.stdout and not args.output_json_path:
+        parser.error("--output_json_path or --stdout required")
+    if not args.no_debug and not args.debug_dir:
+        parser.error("--debug_dir or --no-debug required")
 
     caf = ContrastAuxSettings(
         use_contrast_aux=bool(args.use_contrast_aux),
@@ -3436,11 +3452,14 @@ def main() -> None:
         risk_features_csv_path=args.selective_oracle_risk_features_csv,
     )
 
+    _output_path = args.output_json_path if not args.stdout else None
+    _debug_dir = args.debug_dir if not args.no_debug else None
+
     result = run_single(
         args.image_path,
         args.manual_inputs_path,
-        args.output_json_path,
-        args.debug_dir,
+        _output_path,
+        _debug_dir,
         pipeline=args.pipeline,
         tune_json=args.tune_json,
         allow_experimental_v2=args.allow_experimental_v2,
@@ -3618,9 +3637,11 @@ def main() -> None:
         peak_edge_prominence_thresh=float(args.edge_repair_v2_peak_edge_prominence_thresh),
         peak_edge_guard_delta_cap_px=float(args.edge_repair_v2_peak_edge_guard_delta_cap_px),
     )
-    print(f"[DONE] confidence={result.confidence}, warnings={len(result.warnings)}")
-    print(f"  -> {args.output_json_path}")
-    print(f"  -> {args.debug_dir}/")
+    print(f"[DONE] confidence={result.confidence}, warnings={len(result.warnings)}", file=sys.stderr)
+    if args.stdout:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    elif args.output_json_path:
+        print(f"  -> {args.output_json_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":
