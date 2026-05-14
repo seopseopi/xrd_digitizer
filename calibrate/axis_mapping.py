@@ -1,9 +1,12 @@
 """
 $16: Pixel -> numeric axis mapping.
 
-- x mapping: 2-point linear (pixel x -> two_theta)
-- y mapping: 2-point linear + inversion (pixel y -> intensity, y-axis inverted)
+- x mapping: LinearRegression (pixel x -> two_theta)
+- y mapping: LinearRegression (pixel y -> intensity, y-axis inverted)
 - Roundtrip error calculation
+
+캘리브레이션 포인트(2점)를 학습 데이터로 삼아 sklearn LinearRegression 모델을
+fitting하고, 추출된 픽셀 좌표 전체에 적용해 물리적 수치로 복원한다.
 
 주의: manual_inputs 의 축 좌표는 plot_box 기준 원본 이미지 좌표이다. ROI crop 후
 픽셀 열·행은 crop 기준(0,0)이며, perspective 보정이 켜지면 ROI가 워핑되므로
@@ -16,6 +19,7 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 
 import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 def build_x_mapping(
@@ -24,7 +28,7 @@ def build_x_mapping(
     plot_box: List[int],
 ) -> Dict:
     """
-    2-point linear x mapping: pixel_x -> two_theta.
+    X축 캘리브레이션: LinearRegression으로 pixel_x -> two_theta 모델 학습.
     x_axis_points: [[px1, py1], [px2, py2]]
     x_axis_values: [val1, val2]
     """
@@ -37,8 +41,10 @@ def build_x_mapping(
     if abs(px2 - px1) < 1e-6:
         return {"scale": 0.0, "offset": v1, "px_ref": [px1, px2], "val_ref": [v1, v2]}
 
-    scale = (v2 - v1) / (px2 - px1)
-    offset = v1 - scale * px1
+    model = LinearRegression()
+    model.fit([[px1], [px2]], [v1, v2])
+    scale = float(model.coef_[0])
+    offset = float(model.intercept_)
 
     return {"scale": scale, "offset": offset, "px_ref": [px1, px2], "val_ref": [v1, v2]}
 
@@ -49,8 +55,8 @@ def build_y_mapping(
     plot_box: List[int],
 ) -> Dict:
     """
-    2-point linear y mapping WITH inversion: pixel_y -> intensity.
-    Pixel y increases downward, intensity increases upward.
+    Y축 캘리브레이션: LinearRegression으로 pixel_y -> intensity 모델 학습.
+    픽셀 y는 아래로 증가, intensity는 위로 증가 (역방향 자동 반영).
     """
     x0, y0, x1, y1 = plot_box
     py1 = float(y_axis_points[0][1]) - y0
@@ -61,8 +67,10 @@ def build_y_mapping(
     if abs(py2 - py1) < 1e-6:
         return {"scale": 0.0, "offset": v1, "px_ref": [py1, py2], "val_ref": [v1, v2]}
 
-    scale = (v2 - v1) / (py2 - py1)
-    offset = v1 - scale * py1
+    model = LinearRegression()
+    model.fit([[py1], [py2]], [v1, v2])
+    scale = float(model.coef_[0])
+    offset = float(model.intercept_)
 
     return {"scale": scale, "offset": offset, "px_ref": [py1, py2], "val_ref": [v1, v2]}
 
