@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from dataclasses import replace
@@ -1442,6 +1443,47 @@ def run_pipeline(
             "num_candidates_base_conf_too_low": 0.0,
         }
 
+    # Fallback artifact 제거: DP trace는 candidate를 못 찾으면 y=0 (ROI 상단) 으로
+    # fallback해서 출력에서 wide plateau를 만든다. 이는 양끝뿐 아니라 trace 중간
+    # 어디서든 발생하며, 출력에서 y_max로 클립되어 1,000,000 plateau가 된다.
+    #
+    # 실제 peak도 ROI 상단(y가 작음)에 도달하지만 폭이 좁다 (몇 px ~ roi_w의 1% 이하).
+    # fallback plateau는 더 넓고 평탄하다.
+    # → 'y < _top_band' 값의 연속된 run을 찾아, _max_peak_width보다 넓으면 fallback으로
+    #    간주해 None 처리. 양끝의 run은 폭에 관계없이 무조건 trim.
+    _top_band       = max(5, int(roi_h * 0.05))
+    _max_peak_width = max(10, int(roi_w * 0.012))  # real peaks ≤ roi_w * 1.2%
+    _min_edge_trim  = 12  # gap_fill MAX_GAP_PX=10 초과
+
+    n_tp = len(trace_path)
+
+    # Pass 1: trace 전체에서 y<_top_band run 검사 → 넓은 run은 fallback artifact
+    _ii = 0
+    while _ii < n_tp:
+        yv = trace_path[_ii]
+        if yv is not None and yv < _top_band:
+            _jj = _ii
+            while _jj < n_tp:
+                yj = trace_path[_jj]
+                if yj is None or yj >= _top_band:
+                    break
+                _jj += 1
+            run_w = _jj - _ii
+            at_left_edge  = (_ii == 0)
+            at_right_edge = (_jj == n_tp)
+            if at_left_edge or at_right_edge or run_w > _max_peak_width:
+                for _kk in range(_ii, _jj):
+                    trace_path[_kk] = None
+            _ii = _jj
+        else:
+            _ii += 1
+
+    # Pass 2: 양끝 _min_edge_trim 무조건 None (DP의 boundary fallback이 작은 y가 아닐 수도 있음)
+    for _ii in range(min(_min_edge_trim, n_tp)):
+        trace_path[_ii] = None
+    for _ii in range(max(0, n_tp - _min_edge_trim), n_tp):
+        trace_path[_ii] = None
+
     # --- Step 15: gap fill / smoothing / peak detection ---
     columns = sorted(final_cands.keys())
     t0 = time.perf_counter()
@@ -2642,6 +2684,17 @@ def validate_only(image_path: str, manual_inputs_path: str) -> bool:
     return True
 
 
+def _sanitize_nan(obj: Any) -> Any:
+    """JSON에서 허용되지 않는 NaN/Inf float를 None으로 교체한다."""
+    if isinstance(obj, float):
+        return None if (math.isnan(obj) or math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_nan(v) for v in obj]
+    return obj
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="§9-10: Run engine on single image")
     parser.add_argument("--image_path", type=str, required=True)
@@ -3639,7 +3692,7 @@ def main() -> None:
     )
     print(f"[DONE] confidence={result.confidence}, warnings={len(result.warnings)}", file=sys.stderr)
     if args.stdout:
-        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        print(json.dumps(_sanitize_nan(result.to_dict()), ensure_ascii=False, indent=2))
     elif args.output_json_path:
         print(f"  -> {args.output_json_path}", file=sys.stderr)
 

@@ -1797,8 +1797,14 @@ def _collect_missing_bridge_ys_in_order(
     existing_candidates: List[dict],
     W: int,
     ym: int,
+    max_out: Optional[int] = None,
 ) -> List[int]:
-    """Collect bridge y values in the same order as the original nested loops."""
+    """Collect bridge y values in the same order as the original nested loops.
+
+    max_out caps total output to avoid O(roi_h) blow-up per column at high
+    upscale factors; source candidates are visited in priority order so the
+    most relevant y values are collected first.
+    """
     missing = np.ones(int(ym) + 1, dtype=bool)
     for c in existing_candidates:
         yi = int(c["y"])
@@ -1813,8 +1819,16 @@ def _collect_missing_bridge_ys_in_order(
         idx = np.flatnonzero(missing[lo : hi + 1])
         if idx.size:
             vals = idx + lo
+            if max_out is not None:
+                remaining = max_out - len(out)
+                if vals.size > remaining:
+                    # Evenly-spaced subsample to preserve coverage across the window
+                    step = max(1, vals.size // remaining)
+                    vals = vals[::step][:remaining]
             out.extend(int(v) for v in vals)
             missing[vals] = False
+        if max_out is not None and len(out) >= max_out:
+            break
     return out
 
 
@@ -1839,6 +1853,10 @@ def bridge_final_candidates_for_dp(
     ym = max(0, roi_h - 1)
     W = dp_transition_window_width(roi_w)
 
+    # trim 후 최대 4개만 남으므로 열당 브리지 후보 생성을 24개로 제한.
+    # 고해상도(roi-upscale 2×)에서 전체 y 범위를 채우는 O(roi_h) 폭발을 방지.
+    _MAX_BRIDGE_PER_COL = max(max_for_dp * 3, 24)
+
     out: Dict[int, List[dict]] = {}
     for col in range(roi_w):
         out[col] = [{**c} for c in final.get(col, [])]
@@ -1849,7 +1867,7 @@ def bridge_final_candidates_for_dp(
         if not prev_list:
             continue
         cur_list = out[col]
-        new_ys = _collect_missing_bridge_ys_in_order(prev_list, cur_list, W, ym)
+        new_ys = _collect_missing_bridge_ys_in_order(prev_list, cur_list, W, ym, max_out=_MAX_BRIDGE_PER_COL)
         if new_ys:
             cur_list.extend(
                 _synth_bridge_candidates_batch(
@@ -1869,7 +1887,7 @@ def bridge_final_candidates_for_dp(
         if not nxt_list:
             continue
         cur_list = out[col]
-        new_ys = _collect_missing_bridge_ys_in_order(nxt_list, cur_list, W, ym)
+        new_ys = _collect_missing_bridge_ys_in_order(nxt_list, cur_list, W, ym, max_out=_MAX_BRIDGE_PER_COL)
         if new_ys:
             cur_list.extend(
                 _synth_bridge_candidates_batch(
