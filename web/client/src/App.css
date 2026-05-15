@@ -38,3 +38,4 @@
   .xrd-standalone .xrd-toolbar { width: 0 !important; overflow: hidden; }
   .xrd-standalone .xrd-main { width: 100% !important; }
 }
+@import './style/DataManagement.css';
