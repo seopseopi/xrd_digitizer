@@ -1,0 +1,139 @@
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24 }
+
+/*기본 설정*/
+
+* {/*기본적으로 html 내 모든 카테고리의 마진과 패딩을 제거*/
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  color: var(--color-text);
+}
+
+body {/*html 바디의 폭을 100%로 고정하고 flex-col 형태로 지정*/
+  width: 100%; height: auto;
+  margin: auto 0;
+  background-color: var(--color-bgb);
+  display: flex; flex-flow: column nowrap; justify-content: flex-start; align-items: center;
+  overflow-y: overlay;
+}
+
+figure {
+  width: 100%; height: auto;
+  padding-bottom: 0 0 130px 0;
+  display: flex; flex-flow: column nowrap; justify-content: center; align-items: center;
+  position: absolute;
+}
+
+ul, ol {list-style: none;} /*링크의 밑줄 제거*/
+
+a {color: inherit; text-decoration: none; cursor: pointer;} /*링크의 밑줄, 색상 제거*/
+
+button,select {background-color: transparent; border: none;} /*버튼, 셀렉트 테두리 제거*/
+
+div,span,a,img,canvas {max-width: 100%;} /*화면 밖으로 객체가 나가는 현상 방지*/
+
+hr {/*구분선 디자인*/
+  width: 98%; height: 1px;
+  margin: 0 1%;
+  background-color: var(--color-monotone-1);
+  opacity: 20%;
+}
+
+/*variable*/
+/* Scientific Calm 테마 (ASTRANTIS_REACT_TEST) */
+:root {
+  /*color - Scientific Calm*/
+  --color-primary: #3B6CB5;
+  --color-sub-1: #8DA9C4;
+  --color-sub-2: #8DA9C4;
+  --color-sub-3: #DBEBFF;
+  --color-monotone-1: #F5F9FC;
+  --color-monotone-2: #DAE1E8;
+  --color-monotone-3: #A9B7C4;
+  --color-monotone-4: #6B7C8E;
+  --color-monotone-5: #2C3E50;
+  --color-monotone-6: #000000;
+  --color-success: #5BA893;
+  --color-warning: #EBCB80;
+  --color-failure: #E07A5F;
+  --color-bg: #ffffff;
+  --color-bgb: #ffffff;
+  --color-text: #000000;
+
+  /*breakpoint*/
+  --small: 480px;
+  --medium: 768px;
+  --large: 1280px;
+
+  /*fontsize*/
+  --h1:2.0rem;
+  --h2:1.7rem;
+  --h3:1.5rem;
+  --h4:1.2rem;
+  --h5:1.1rem;
+  --h6:1.0rem;
+
+  /*shadow*/
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-primary: 0 4px 14px 0 rgba(59, 108, 181, 0.39);
+
+  /*radius*/
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /*transition*/
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/*기본 폰트 설정*/
+html {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-size: 12pt;
+  line-height: 1.0;
+}
+
+h1 {font-weight: 900; font-size: 2.0rem; max-width: 100%;}
+h2 {font-weight: 800; font-size: 1.7rem; max-width: 100%;}
+h3 {font-weight: 700; font-size: 1.5rem; max-width: 100%;}
+h4 {font-weight: 600; font-size: 1.2rem; max-width: 100%;}
+h5 {font-weight: 600; font-size: 1.1rem; max-width: 100%;}
+h6 {font-weight: 600; font-size: 1.0rem; max-width: 100%;}
+figure {line-height: 1.6; margin-bottom: 8px;}
+
+/*아이콘 설정*/
+.icon-sqr-small {
+  width: 24px; height: 24px;
+  margin: 0 5px 0 0;
+  display: flex; justify-content: center; align-items: center;
+}
+
+.icon-sqr-medium {
+  width: 30px; height: 30px;
+  margin: 0 5px 0 0;
+  display: flex; justify-content: center; align-items: center;
+}
+
+/*스크롤바 디자인*/
+*::-webkit-scrollbar {width: 5px; height: 4px;}
+
+*::-webkit-scrollbar-thumb {
+  min-width: 50px; min-height: 50px;
+  margin: 80px 0 0 0;
+
+  background-color: var(--color-primary);
+  border: 2.5px solid transparent; border-radius: 2.5px; outline: none;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: transparent;
+  box-shadow: none;
+}
+

@@ -1,0 +1,306 @@
+/* ProcessingToggle.css - 처리 위치 선택 바 스타일 */
+
+/* ── 메인 컨테이너 ── */
+.processing-location-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+/* ── 아이콘 ── */
+.processing-location-bar .pl-icon {
+  line-height: 1;
+}
+
+.processing-location-bar .pl-icon-13 { font-size: 13px; }
+.processing-location-bar .pl-icon-14 { font-size: 14px; }
+.processing-location-bar .pl-icon-15 { font-size: 15px; }
+.processing-location-bar .pl-icon-16 { font-size: 16px; }
+
+/* ── 컨트롤 바 ── */
+.pl-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+}
+
+.pl-control-bar .pl-label {
+  color: #555;
+  font-weight: 500;
+  margin-right: 2px;
+}
+
+.pl-control-bar .pl-spacer {
+  flex: 1;
+}
+
+.pl-control-bar > .pl-icon:first-of-type {
+  color: #757575;
+}
+
+.pl-control-bar .pl-mode-label {
+  font-size: 11px;
+  color: #999;
+}
+
+.pl-control-bar .pl-direct-hint {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pl-control-bar .pl-expand-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  color: #757575;
+  border-radius: 4px;
+}
+
+.pl-control-bar .pl-expand-btn:hover {
+  background: var(--color-monotone-1);
+  color: var(--color-monotone-5);
+}
+
+/* ── 뱃지 (LocationBadge) ── */
+.pl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pl-badge[data-location="local"] {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+}
+
+.pl-badge[data-location="auto-local"] {
+  color: #1565c0;
+  background-color: #e3f2fd;
+}
+
+.pl-badge[data-location="backend"] {
+  color: #6a1b9a;
+  background-color: #f3e5f5;
+}
+
+.pl-badge[data-location="auto-backend"] {
+  color: #e65100;
+  background-color: #fff3e0;
+}
+
+.pl-badge .pl-icon {
+  font-size: 13px;
+}
+
+/* ── 진행률 바 (JobProgressBar) ── */
+.pl-progress-bar {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pl-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pl-progress-message {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #333;
+}
+
+.pl-progress-message[data-status="failed"] .pl-icon {
+  color: #d32f2f;
+}
+
+.pl-progress-message[data-status="completed"] .pl-icon {
+  color: #2e7d32;
+}
+
+.pl-progress-message[data-status="running"] .pl-icon {
+  color: #1976d2;
+}
+
+.pl-progress-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pl-progress-pct {
+  font-size: 11px;
+  color: #888;
+}
+
+.pl-progress-cancel-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #999;
+}
+
+.pl-progress-cancel-btn:hover {
+  color: #666;
+}
+
+.pl-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #e0e0e0;
+  overflow: hidden;
+}
+
+.pl-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.pl-progress-fill[data-status="failed"] {
+  background: #d32f2f;
+}
+
+.pl-progress-fill[data-status="completed"] {
+  background: #2e7d32;
+}
+
+.pl-progress-fill[data-status="running"] {
+  background: #1976d2;
+}
+
+/* ── 대용량 파일 경고 배너 ── */
+.pl-large-file-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  font-size: 12px;
+  color: #795548;
+}
+
+.pl-large-file-warning .pl-icon {
+  color: #f9a825;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.pl-large-file-warning .pl-message {
+  flex: 1;
+}
+
+.pl-large-file-warning .pl-dismiss-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  color: #aaa;
+}
+
+.pl-large-file-warning .pl-dismiss-btn:hover {
+  color: #666;
+}
+
+/* ── 설정 패널 (펼쳤을 때) ── */
+.pl-settings-panel {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pl-settings-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.pl-settings-label .pl-label-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pl-settings-label .pl-icon-local {
+  color: #2e7d32;
+}
+
+.pl-settings-label .pl-icon-backend {
+  color: #6a1b9a;
+}
+
+.pl-threshold-row .pl-icon-data {
+  color: #757575;
+}
+
+.pl-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pl-threshold-row .pl-label {
+  color: #555;
+}
+
+.pl-threshold-input {
+  width: 60px;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.pl-threshold-hint {
+  color: #888;
+  font-size: 12px;
+}
+
+.pl-sw-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.pl-sw-status[data-available="true"] {
+  color: #2e7d32;
+}
+
+.pl-sw-status[data-available="false"] {
+  color: #757575;
+}

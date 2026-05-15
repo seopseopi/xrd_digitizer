@@ -1,0 +1,58 @@
+.tabbar {
+  width: 100%; height: 48px;
+  padding: 4px;
+  border-bottom: solid 1px var(--color-monotone-2);
+  display: flex; justify-content: flex-start; align-items: center;
+  flex-shrink: 0;
+}
+
+.tabbar-container {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.tabbar-item:hover {
+  background-color: var(--color-monotone-3);
+  color: var(--color-text);
+}
+
+.tabbar-item.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.tabbar-label {
+  white-space: nowrap;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .tabbar {
+    height: 60px;
+    padding: 0 10px;
+  }
+  
+  .tabbar-item {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabbar {
+    height: 50px;
+    padding: 0 8px;
+  }
+  
+  .tabbar-item {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .tabbar-label {
+    display: none;
+  }
+}

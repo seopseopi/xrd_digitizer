@@ -1,0 +1,91 @@
+/* Modal 스타일 */
+.modal-overlay {
+  position: fixed; top: 0; bottom: 0; left: 0; right: 0;
+  padding: 16px; 
+  background: rgba(0, 0, 0, 0.5);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 10001; /* 헤더(10000)보다 위에 표시 */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  width: 100%; max-height: 90vh;
+  padding: 16px;
+  background: var(--color-bg);
+  border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow-y: auto; animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+  display: flex; flex-flow: column nowrap; gap: 8px;
+  z-index: 10002; /* overlay보다 위에 표시 */
+}
+
+.modal-content.small { max-width: 500px; }
+.modal-content.medium { max-width: 700px; }
+.modal-content.large { max-width: 900px; }
+.modal-content.extra-large { max-width: 1200px; }
+
+.modal-header {
+  margin: 0; padding: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0; 
+  font-size: 20px; font-weight: 600;
+  color: var(--color-primary);
+}
+
+.close-btn {
+  width: 32px; height: 32px;
+  padding: 4px;
+  color: var(--color-monotone-5); background: none;
+  border: none; border-radius: 4px;
+  font-size: 20px;
+  display: flex; justify-content: center; align-items: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.close-btn:hover { color: var(--color-text); background: var(--color-monotone-6); }
+
+.modal-body { width: 100%; }
+
+/* 연구 일정 상세: 본문만 스크롤, 하단 푸터 고정 */
+.modal-content:has(.schedule-detail-modal) {
+  overflow: hidden;
+  max-height: min(90vh, 820px);
+}
+
+.modal-content:has(.schedule-detail-modal) .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 애니메이션 */
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .modal-overlay { padding: 10px; }
+  .modal-content { max-height: 95vh; }
+  .modal-content.large { max-width: 95%; }
+  .modal-header { padding: 20px 20px 16px; }
+  .modal-header h3 { font-size: 18px; }
+  .modal-body { padding: 20px; }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay { padding: 5px; }
+  .modal-content { max-height: 98vh; }
+  .modal-header { padding: 16px 16px 12px;}
+  .modal-header h3 { font-size: 16px; }
+  .modal-body { padding: 16px; }
+}
+

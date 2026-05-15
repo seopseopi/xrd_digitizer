@@ -1,0 +1,432 @@
+/* 공통 업로드 섹션 스타일 */
+
+/* 기본 업로드 섹션 */
+.upload-section,
+.file-upload-section {
+  width: 100%;
+  padding: 4px;
+  border-bottom: solid 1px var(--color-monotone-2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  transition: all var(--transition-normal);
+}
+
+/* 업로드 영역 (드래그 앤 드롭) */
+.upload-area {
+  position: relative;
+  z-index: 1;
+  padding: 20px;
+}
+
+.upload-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.upload-header {
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.upload-title {
+  font-size: 24px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-area h3 {
+  font-size: 24px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-description,
+.upload-area p {
+  font-size: 16px;
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+/* 업로드 버튼 */
+.upload-btn,
+.file-upload-btn,
+.upload-button,
+label.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-bounce);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 300px;
+  user-select: none;
+  -webkit-user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* label 내부 input 숨김 처리 */
+.upload-btn input[type="file"],
+.file-upload-btn input[type="file"],
+.upload-button input[type="file"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.upload-btn:hover,
+.file-upload-btn:hover,
+.upload-button:hover,
+label.upload-btn:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  background: #f8f9ff;
+}
+
+.upload-btn:active,
+.file-upload-btn:active,
+.upload-button:active,
+label.upload-btn:active {
+  transform: translateY(-2px) scale(1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.upload-btn:disabled,
+.file-upload-btn:disabled,
+.upload-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 업로드 액션 영역 */
+.upload-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  z-index: 1;
+}
+
+.upload-actions .upload-btn {
+  flex: 0 1 auto;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+/* JSON/CSV 버튼 특수 스타일 */
+.upload-btn.json-btn {
+  background: linear-gradient(135deg, #e8f4f8 0%, #d1ecf1 100%);
+  color: #0c5460;
+  border: 2px solid #bee5eb;
+  white-space: nowrap;
+}
+
+.upload-btn.json-btn:hover {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  border-color: #17a2b8;
+  color: #0c5460;
+  transform: translateY(-2px) scale(1.02);
+}
+
+.upload-btn.json-btn .material-symbols-rounded {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.upload-btn.csv-btn {
+  background: linear-gradient(135deg, #f0f8e8 0%, #e6f5d0 100%);
+  color: #155724;
+  border: 2px solid #c3e6cb;
+  white-space: nowrap;
+}
+
+.upload-btn.csv-btn:hover {
+  background: linear-gradient(135deg, #e6f5d0 0%, #c3e6cb 100%);
+  border-color: #28a745;
+  color: #155724;
+  transform: translateY(-2px) scale(1.02);
+}
+
+.upload-btn.csv-btn .material-symbols-rounded {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* 업로드된 파일 정보 */
+.uploaded-file-info {
+  margin-top: 24px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 1;
+  transition: all var(--transition-normal);
+}
+
+.uploaded-file-info:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.file-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.file-name {
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 파일 아이템 리스트 */
+.attached-files {
+  margin-top: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all var(--transition-normal);
+}
+
+.file-item:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(4px);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+.file-remove-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.file-remove-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.file-remove-btn:active {
+  transform: scale(0.95);
+}
+
+/* 드래그 오버 상태 */
+.upload-section.drag-over,
+.file-upload-section.drag-over {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  border: 3px dashed rgba(255, 255, 255, 0.5);
+  transform: scale(1.02);
+}
+
+/* 분석 중 오버레이 */
+.analyzing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  gap: 20px;
+}
+
+.analyzing-overlay p {
+  font-size: 18px;
+  font-weight: 600;
+  color: #667eea;
+  margin: 0;
+}
+
+.analyzing-detail {
+  font-size: 14px;
+  color: var(--color-monotone-4);
+  font-weight: 400;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(102, 126, 234, 0.1);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .upload-section,
+  .file-upload-section {
+    padding: 30px 20px;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+  }
+
+  .upload-title,
+  .upload-area h3 {
+    font-size: 20px;
+  }
+
+  .upload-description,
+  .upload-area p {
+    font-size: 14px;
+  }
+
+  .upload-btn,
+  .file-upload-btn,
+  .upload-button {
+    padding: 12px 20px;
+    font-size: 14px;
+    min-width: 140px;
+    max-width: 100%;
+  }
+
+  .upload-actions {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .upload-actions .upload-btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .uploaded-file-info {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-section,
+  .file-upload-section {
+    padding: 24px 16px;
+  }
+
+  .upload-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .upload-title,
+  .upload-area h3 {
+    font-size: 18px;
+  }
+
+  .upload-btn,
+  .file-upload-btn,
+  .upload-button {
+    width: 100%;
+    min-width: auto;
+    max-width: 100%;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .upload-actions {
+    gap: 10px;
+  }
+
+  .upload-actions .upload-btn {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+

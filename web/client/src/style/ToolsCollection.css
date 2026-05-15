@@ -1,0 +1,242 @@
+/* ToolsCollection - 루트 래퍼 (전체 높이 사용) */
+.tools-collection-root.box-col {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* 이미지 ML 모델 생성: 뷰포트에 맞춰 내부에서만 스크롤·패닝 처리 */
+.tools-collection-root--scroll-lock {
+  overflow: hidden;
+}
+
+/* 도구 페이지 내 data-management (ImageFFTConverter 등) 전체 높이 사용 */
+.tools-collection-root .data-management {
+  height: 100%;
+}
+
+.tools-collection-overview {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: tools-overview;
+}
+
+/*
+ * 본문 컨테이너 폭 기준: 최대 3열(넓은 화면에서도 6열 이상으로 늘어나지 않음), 좁으면 2열·1열.
+ * @container 미지원 브라우저용으로 auto-fit 최소 폭(320px) fallback.
+ */
+.tools-collection-grid {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+@container tools-overview (min-width: 640px) {
+  .tools-collection-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container tools-overview (min-width: 960px) {
+  .tools-collection-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.tools-collection-grid > * {
+  min-width: 0;
+}
+
+.tools-collection-overview--empty {
+  padding: 8px;
+}
+
+/* 도구 카드: 상단 컬러 → 하단 블랙 그라데이션 + 우상단 데코 아이콘 */
+.tool-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  cursor: pointer;
+  box-sizing: border-box;
+  width: 100%;
+  /* 높이는 너비에만 의존: min-height와 aspect-ratio를 같이 쓰면 최소 너비가 커져 그리드보다 넓어짐 */
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  align-self: start;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.08),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.1),
+    0 20px 48px rgba(15, 23, 42, 0.12);
+}
+
+.tool-card:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* 테마별 그라데이션 */
+.tool-card--xrd {
+  background: linear-gradient(165deg, #2563eb 0%, #1e293b 45%, #020617 100%);
+}
+
+.tool-card--ebsd {
+  background: linear-gradient(165deg, #059669 0%, #0f3d34 42%, #020617 100%);
+}
+
+.tool-card--fft {
+  background: linear-gradient(165deg, #7c3aed 0%, #431d73 42%, #020617 100%);
+}
+
+.tool-card--eds {
+  background: linear-gradient(165deg, #ea580c 0%, #7c2d12 40%, #020617 100%);
+}
+
+.tool-card--saed {
+  background: linear-gradient(165deg, #eab308 0%, #713f12 42%, #020617 100%);
+}
+
+.tool-card--image {
+  background: linear-gradient(165deg, #64748b 0%, #334155 42%, #020617 100%);
+}
+
+.tool-card--process {
+  background: linear-gradient(165deg, #1d4ed8 0%, #1e3a8a 42%, #020617 100%);
+}
+
+.tool-card--papers {
+  background: linear-gradient(165deg, #0d9488 0%, #064e46 42%, #020617 100%);
+}
+
+.tool-card--focus-restore {
+  background: linear-gradient(165deg, #be185d 0%, #7f1d50 42%, #020617 100%);
+}
+
+.tool-card-decoration {
+  position: absolute;
+  top: 8%;
+  right: 4%;
+  width: min(52%, 320px);
+  height: auto;
+  color: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tool-card-icon-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.tool-card-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 14px;
+  background: linear-gradient(
+    to bottom,
+    rgba(2, 6, 23, 0) 35%,
+    rgba(2, 6, 23, 0.55) 78%,
+    rgba(2, 6, 23, 0.82) 100%
+  );
+}
+
+.tool-card-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.tool-card-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.tool-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.tool-card-tag {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 768px) {
+  .tools-collection-overview {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .tool-card-content {
+    padding: 22px;
+    gap: 12px;
+  }
+
+  .tool-card-title {
+    font-size: 1.25rem;
+  }
+
+  .tool-card-description {
+    font-size: 0.9375rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .tool-card-decoration {
+    width: min(48%, 220px);
+  }
+
+  .tool-card-tag {
+    padding: 5px 12px;
+    font-size: 0.75rem;
+  }
+}

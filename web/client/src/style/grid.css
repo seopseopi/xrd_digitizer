@@ -1,0 +1,13 @@
+/* grid */
+.grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+/* grid에 autocomplete-container가 있는 경우 overflow: visible */
+.grid:has(.autocomplete-container) {
+  overflow: visible;
+}
+

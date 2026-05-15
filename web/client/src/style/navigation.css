@@ -1,0 +1,398 @@
+/*네비게이션 - 현대적 글래스/미니멀 스타일 */
+header {
+  width: 100%; height: 70px;
+  padding: 0% 5%;
+  background: color-mix(in srgb, var(--color-bgb) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-monotone-2) 60%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex; justify-content: center; align-items: center;
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 2;
+}
+
+nav {
+  width: 98%; height: 60px;
+  padding: 8px;
+  background-color: transparent;
+  border-radius: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  position: absolute;
+}
+
+.logo-int {display: flex; justify-content: center; align-items: center;}
+
+.logo {
+  width: 40px; height: 40px;
+  margin: 0 8px 0 0;
+  border-radius: 8px;
+}
+
+.typo {height: 40px; margin-bottom: 8px;}
+@media screen and (max-width: 480px) {.typo {height: 30px;}}
+
+.typo-small {height: 16px;}
+
+.logo-int h4 {font-weight: 900; line-height: 1.0;}
+@media screen and (max-width: 480px) {.logo-int h4 {font-size: 1.2rem;}}
+
+#gnb {    
+  width: 50%;
+  display: flex; justify-content: center; align-items: center;
+}
+
+header nav li {
+  height: 40px;
+  margin: 0 5px; padding: 0 15px;
+  border-radius: 16px;
+  font-weight: 600; font-size: 1.2rem;
+  display: flex; justify-content: center; align-items: center;
+}
+
+header nav li:hover {
+  color: var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+#gnb-login-link {display: flex;}
+
+
+#side-menu {
+  width: 300px; height: 100dvh;
+  padding: 15px;
+  border-right: solid 1px var(--color-monotone-2); border-radius: 0;
+  line-height: 1.0;
+  position: fixed; top: 0;
+  display: flex; flex-flow: column nowrap; gap: 5px;
+  z-index: 1100; /* Above canvas UI (1000-1003) but below header (10000) */
+}
+
+#side-menu-r {
+  width: 300px; height: calc(100dvh - 70px);
+  padding: 15px;
+  background-color: var(--color-bg);
+  border-left: solid 1px var(--color-monotone-2); border-radius: 0;
+  line-height: 1.0;
+  position: fixed; top: 70px; right: 0;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  width: 100%;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--color-text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-brand:hover {
+  background-color: color-mix(in srgb, var(--color-monotone-2) 70%, transparent);
+}
+
+.sidebar-brand.active {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg));
+}
+
+.sidebar-brand-text {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 좁은 GNB: 전체 워드마크 숨기고 'M'만 표시 (토글 접힘 · max-width:1280 공통) */
+.sidebar-brand-text-full {
+  display: inline;
+}
+
+.sidebar-brand-text-mark {
+  display: none;
+}
+
+.side-menu-narrow .sidebar-brand-text-full {
+  display: none;
+}
+
+.side-menu-narrow .sidebar-brand-text-mark {
+  display: inline;
+}
+
+.sidebar-brand-divider {
+  width: 100%;
+  margin: 4px 0 8px;
+  border: 0;
+  border-top: 1px solid var(--color-monotone-2);
+}
+
+.side-menu-item {
+  width: 100%; 
+  min-height: 32px;
+  margin: 0; padding: 0 10px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex; 
+  justify-content: flex-start; 
+  align-items: center; 
+  flex: 0 0 auto;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  gap: 10px;
+}
+.side-menu-item:hover {
+  background-color: color-mix(in srgb, var(--color-monotone-2) 70%, transparent);
+}
+
+/* 활성 메뉴: 그라데이션 제거, 가시성 좋은 미니멀 스타일 (ASTRANTIS 참고) */
+.side-menu-item.active {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg));
+  color: var(--color-primary);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent);
+  position: relative;
+}
+
+.side-menu-item.active .material-symbols-rounded,
+.side-menu-item.active * {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.gnb-menu-inv {
+  margin: 0 0 0 5px;
+  display: flex; align-items: center;
+}
+
+#side-menu hr { margin: 5px 0;}
+
+#open-gnb {position: absolute; right: -16px; bottom: 30px; display: none;}
+#close-gnb {position: absolute; right: -16px; bottom: 30px; display: block;}
+@media screen and (max-width: 1280px) {#open-gnb, #close-gnb{display: none !important;}}
+.side-menu-narrow {width: 80px !important; align-items: center !important;}
+.side-menu-narrow .gnb-menu-inv {display: none;}
+
+/* 프로필 드롭다운 — init.css 전역 div { max-width: 100% }가 부모(좁은 사이드바) 폭으로 캡을 걸어 UI가 깨지므로 해제 */
+.profile-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: min(270px, calc(100vw - 24px));
+  min-width: 200px;
+  max-width: none;
+  margin-bottom: 8px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.profile-dropdown .side-menu-item { justify-content: flex-start !important; }
+
+/* 프로필 이미지 */
+.img-profile-round {
+  width: 32px; height: 32px;
+  border-radius: 12px;
+}
+
+/* 접힌 상태에서 프로필 화살표 숨김 */
+@media screen and (max-width: 1280px) {
+  #side-menu .side-menu-item.pd0 > span.material-symbols-rounded:last-child {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 1700px) {
+  #side-menu-r {
+      height: 500px;
+      border: solid 1px var(--color-monotone-2); border-radius: 16px;
+      top: 80px; right: 8px;
+      z-index: 100;
+  }
+}
+
+@media screen and (max-width:1280px) {
+  #side-menu {
+      width: 80px;
+      align-items: center;
+      gap: 3px;
+  }
+
+  #side-menu .sidebar-brand-text-full {
+    display: none;
+  }
+
+  #side-menu .sidebar-brand-text-mark {
+    display: inline;
+  }
+
+  .side-menu-item {justify-content: center !important;}
+  .gnb-menu-inv {display: none;}
+}
+
+@media screen and (max-width: 1280px) {.only-wide {display: none;}}
+@media screen and (min-width: 1280px) {.only-narrow {display: none;}}
+
+
+@media screen and (max-width:768px) {#side-menu, #side-menu-r {display: none;}}
+@media screen and (max-height: 730px) {.side-menu-item {height: 32px;}}
+@media screen and (max-height: 630px) {.only-dt {display: none;}}
+
+
+/* Toolbar (우측 도구 패널) */
+#toolbar {
+  width: 300px;
+  height: 100dvh;
+  padding: 0;
+  border-left: solid 1px var(--color-monotone-2);
+  border-radius: 0;
+  line-height: 1.0;
+  position: fixed;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  z-index: 1100;
+}
+
+.toolbar-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.toolbar-header-strip {
+  flex-shrink: 0;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: solid 1px var(--color-monotone-2);
+}
+
+.toolbar-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-monotone-5);
+}
+
+.toolbar-scroll-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.toolbar-empty-hint {
+  padding: 20px;
+  text-align: center;
+  color: var(--color-monotone-4);
+  font-size: 13px;
+}
+
+/* 스크롤 영역과 분리된 최하단 푸터 (예: EBSD 측정 정보) */
+.toolbar-footer {
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-monotone-2);
+  background: var(--color-bg);
+}
+
+/* EBSD 측정 정보 — 도구 패널 푸터 전용 */
+.ebsd-toolbar-measurement-footer {
+  width: 100%;
+  padding: 8px 10px 6px;
+  border-radius: 8px;
+  background: var(--color-monotone-1);
+  border: 1px solid var(--color-monotone-2);
+  box-sizing: border-box;
+}
+
+.ebsd-toolbar-measurement-footer-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-monotone-4);
+  margin-bottom: 8px;
+}
+
+.ebsd-toolbar-measurement-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.ebsd-toolbar-measurement-row:last-child {
+  margin-bottom: 0;
+}
+
+.ebsd-toolbar-measurement-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-monotone-4);
+}
+
+.ebsd-toolbar-measurement-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+  word-break: break-word;
+  width: 100%;
+}
+
+/* 도구 탭 내 커스텀 콘텐츠 (예: EBSD 맵 설정) */
+.toolbar-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.toolbar-content .ebsd-toolbar-panel {
+  width: 100%;
+  max-width: 100%;
+}
+
+.toolbar-content .ebsd-toolbar-panel canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+@media screen and (max-width: 1400px) {
+  #toolbar {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  #toolbar {
+    display: none;
+  }
+}
+

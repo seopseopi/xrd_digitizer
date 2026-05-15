@@ -1,0 +1,209 @@
+/*버튼 설정*/
+button {font-family: 'Pretendard'; font-weight: 400; font-size: 12pt; line-height: 1.0;}
+.btn-over {opacity: 90%;} /*btn-over는 오버레이 관련 설정입니다. 화면 위에 떠있는 호버링 버튼을 찾는다면 'btn-hover를 참고하세요'*/
+.btn-over:hover {opacity: 100%;}
+
+/*버튼 설정 - 그룹*/
+.btn-group,
+.btn-group-col {
+  max-width: 100%;
+  display: flex; justify-content: flex-start; align-items: center; flex-shrink: 0; gap: 8px;
+  overflow: scroll;
+  white-space: nowrap;
+}
+
+.btn-group-col {flex-direction: column;}
+.btn-group::-webkit-scrollbar {display: none;}
+
+.btn-selector {
+  width: auto; height: 32px;
+  margin: 0 0 8px 0; padding: 4px;
+  border: solid 1px var(--color-monotone-1); border-radius: 8px;
+  display: flex; 
+}
+
+.btn-selector .btn-sqr {
+  width: 32px; height: 32px;
+  margin: 0 4px 0 0; 
+  border: none; border-radius: 4px; 
+  background-color: var(--color-bg);
+}
+
+.btn-selector .btn-sqr.selected{background-color: var(--color-monotone-1);}
+.btn-selector .btn-sqr:nth-last-child(1) {margin: 0;}
+.btn-selector .btn-sqr .material-symbols-rounded {font-size:20px;}
+
+/*버튼 설정 - 형태*/
+.btn-sqr {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-lg);
+  display: flex; justify-content: center; align-items: center; flex: 0 0 auto;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-sqr:hover {
+  transform: scale(1.05);
+}
+
+.btn-sqr:active {
+  transform: scale(0.95);
+}
+
+.btn-rtg {
+  min-width: 60px; height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  display: flex; justify-content: center; align-items: center; flex: 0 0 auto;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-rtg:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-fill {
+  width: 100%; height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  display:flex; justify-content: space-between; align-items: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-fill:active {
+  transform: scale(0.98);
+}
+
+.btn-rtgwicon {
+  width: min-content; min-width: 60px; height: 32px;
+  padding: 0 12px 0 16px;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  display: flex; justify-content: center; align-items: center; flex: 0 0 auto;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-rtgwicon:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-rtgwicon:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-rtgwicon:nth-child(1) {width:auto; margin-right: 8px;}
+
+.btn-small {
+  height: 20px;
+  padding: 4px;
+  font-size: 16px;
+  border-radius: 4px;
+  display: flex; justify-content: center; align-items: center; flex: 0 0 auto;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-small:hover {
+  transform: scale(1.05);
+}
+
+.btn-small:active {
+  transform: scale(0.95);
+}
+
+.btn-hover {
+  width: 56px; height: 56px;
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+  opacity: 95%;
+  border-radius: 30px;
+  display: flex; justify-content: center; align-items: center;
+  position: fixed; top: calc(100dvh - 140px); right: 5%;
+  z-index: 2;
+  cursor: pointer;
+  transition: all var(--transition-bounce);
+}
+
+.btn-hover:hover {
+  transform: scale(1.1) translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  opacity: 1;
+}
+
+.btn-hover:active {
+  transform: scale(0.95);
+}
+
+@media screen and (max-width: 768px) {.btn-hover{top: calc(100dvh - 190px);}}
+@media screen and (min-width: 1400px) {.btn-hover{right: calc((100% - 1260px)/2);}}
+
+.btn-rtg.pd0 {
+  min-width: 0;
+}
+
+/*버튼 설정 - 색상*/
+.btn-trans{background-color: transparent; box-shadow: none;}
+.btn-trans:hover{box-shadow: none;}
+.btn-trans:hover>*{color: var(--color-primary);}
+.btn-border{background-color: var(--color-bg); border: solid 1px var(--color-monotone-2);}
+.btn-border:hover{background-color: var(--color-bg); border: solid 1px var(--color-text);}
+
+.btn-monotone-1{background-color: var(--color-monotone-1);}
+.btn-monotone-2{background-color: var(--color-monotone-2);}
+.btn-monotone-1:hover{background-color: var(--color-primary); color: white;}
+.btn-monotone-2:hover{background-color: var(--color-primary); color: white;}
+
+.btn-monotone-1:hover>*{color: white;}
+.btn-monotone-2:hover>*{color: white;}
+
+.btn-primary{background: var(--color-primary); color: white;}
+.btn-success{background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;}
+.btn-warning{background-color: var(--color-warning);}
+.btn-failure{background-color: var(--color-failure); color: white;}
+.btn-primary:hover{background: var(--color-monotone-1); color: var(--color-primary); box-shadow: var(--shadow-md);}
+.btn-success:hover{background: var(--color-monotone-1); color: var(--color-success);}
+.btn-warning:hover{background-color: var(--color-monotone-1); color: var(--color-warning);}
+.btn-failure:hover{background-color: var(--color-monotone-1); color: var(--color-failure);}
+
+.btn-primary>*{color: white;}
+.btn-success>*{color: white;}
+.btn-failure>*{color: white;}
+.btn-primary:hover>*{color: var(--color-primary);}
+.btn-success:hover>*{color: var(--color-success);}
+.btn-warning:hover>*{color: var(--color-warning);}
+.btn-failure:hover>*{color: var(--color-failure);}
+
+.btn-trans.btn-primary{background: transparent; color: var(--color-primary); box-shadow: none;}
+.btn-trans.btn-failure{background: transparent; color: var(--color-failure); box-shadow: none;}
+
+.btn-trans.btn-primary>*{color: var(--color-primary);}
+.btn-trans.btn-failure>*{color: var(--color-failure);}
+
+.btn-trans:hover.btn-primary:hover{opacity: 50%; box-shadow: none;}
+.btn-trans:hover.btn-failure:hover{opacity: 50%; box-shadow: none;}
+
+.btn-line{background-color: transparent; border: solid 1px var(--color-monotone-1);}
+.btn-line:hover{background-color: var(--color-primary); color:white; border: none;}
+.btn-line:hover>*{color: white;}
+
+.btn-rtg.selected,
+.btn-rtg.btn-active,
+.btn-rtg.active {background: var(--color-primary); color: white;}
+.btn-rtg:hover.selected:hover,
+.btn-rtg:hover.btn-active:hover,
+.btn-rtg:hover.active:hover {background: var(--color-monotone-1); color: var(--color-primary); box-shadow: var(--shadow-md); transition: .3s ease-in-out;}
+
+#btn-group-sort #sort-views,
+#btn-group-sort #sort-timestamp,
+#btn-group-sort #sort-likes{display: none;}
+
+.active-sort {display: flex !important;}
+

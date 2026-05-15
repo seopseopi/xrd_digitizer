@@ -1,0 +1,188 @@
+/*container/box*/
+.container {
+  width: 100%;
+  display: flex; justify-content: center; align-items: flex-start; flex-flow: column nowrap;
+}
+
+.box-row {
+  width: 100%;
+  padding: 8px;
+  display: flex; justify-items: flex-start; align-items: center;
+}
+
+.box-row h4 {
+  margin: 0;
+  line-height: 1.0;
+}
+
+.box-col {
+  width: 100%;
+  padding: 8px;
+  display: flex; justify-content: flex-start; align-items: flex-start; flex-flow: column nowrap;
+}
+
+.box-group {
+  width: 100%;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+
+.box-group-col {
+  width: 100%;
+  display: flex; justify-content: flex-start; align-items: center; flex-flow: column nowrap; gap: 8px;
+}
+
+.box-component:nth-last-child(1) {width: 50px;}
+
+@media screen and (max-width: 768px) {
+  .box-component {width: calc((100% - 70px) / 2);}
+  .box-component:nth-last-child(2) {display: none;}
+}
+
+@media screen and (max-width: 480px) {
+  .box-component {width: calc((100% - 60px));}
+  .box-component:nth-last-child(2),
+  .box-component:nth-last-child(3) {display: none;}
+}
+
+.box-primary {
+  color: var(--color-primary);
+  box-shadow: 0 1px 2px var(--color-primary);
+}
+
+/* Info Grid (정보 그리드) */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* Specimen Info Item (시편 정보 아이템) */
+.specimen-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.specimen-info-item .info-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-monotone-3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 0;
+}
+
+.specimen-info-item .info-value {
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* Safety Info Item (안전 정보 아이템) */
+.info-item.safety {
+  padding: 12px 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.info-item.safety .info-label {
+  color: #dc2626;
+  font-weight: 600;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.info-item.safety .info-value {
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .info-item {
+    gap: 8px;
+    padding: 6px 0;
+  }
+
+  .info-label {
+    font-size: 13px;
+    min-width: 80px;
+  }
+
+  .info-value {
+    font-size: 13px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ===== Empty State (빈 상태) ===== */
+.empty-state {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-monotone-3);
+}
+
+.empty-state.absolute {
+  position: absolute;
+  inset: 0;
+}
+
+.empty-state.bordered {
+  padding: 60px 20px;
+  background: transparent;
+  border: 2px dashed var(--color-monotone-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state.padded {
+  padding: 80px 40px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-icon-small {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.empty-state h3,
+.empty-state h4 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-monotone-5);
+  margin: 0 0 8px 0;
+}
+
+.empty-state h3 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--color-monotone-3);
+  margin: 0;
+}
+
+.empty-state p.large {
+  font-size: 16px;
+}
+

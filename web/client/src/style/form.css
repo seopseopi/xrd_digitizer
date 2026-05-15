@@ -1,0 +1,175 @@
+/* Form 스타일 */
+.form-container {
+  background: var(--color-bg); overflow: hidden;
+  
+  &.loading { opacity: 0.7; pointer-events: none; }
+  &.loading::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--color-bg) 80%, transparent); display: flex; align-items: center; justify-content: center; }
+  &.compact { box-shadow: none; border: 1px solid var(--color-monotone-2); }
+  &.compact .form-header { background: var(--color-bg); padding: 16px 20px 12px; }
+  &.compact .form-content { padding: 20px;}
+  &.large .form-content { padding: 32px;}
+  &.large .form-header { padding: 32px 32px 20px; }
+}
+  
+.form-header {
+  padding: 24px 24px 16px; border-bottom: 1px solid var(--color-monotone-2); background: var(--color-monotone-1);
+  h3 { margin: 0; font-size: 20px; font-weight: 600; color: var(--color-text); }
+}
+
+.form-content {
+  display: flex; flex-flow: column nowrap; gap: 16px;
+}
+
+.form-field {
+  margin-bottom: 20px;
+  
+  &.error .form-input, &.error .form-select, &.error .form-textarea { border-color: var(--color-failure); }
+  &.error .form-input:focus, &.error .form-select:focus, &.error .form-textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-failure) 10%, transparent); }
+  &.success .form-input, &.success .form-select, &.success .form-textarea { border-color: var(--color-success); }
+  &.success .form-input:focus, &.success .form-select:focus, &.success .form-textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 10%, transparent); }
+}
+
+.form-label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--color-monotone-5); font-size: 14px; }
+.required { color: var(--color-failure); margin-left: 2px; }
+.form-help { margin-top: 4px; font-size: 12px; color: var(--color-monotone-3); }
+.form-error { margin-top: 4px; font-size: 12px; color: var(--color-failure); }
+
+.form-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  
+  &.single { grid-template-columns: 1fr; }
+  &.triple { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%; height: 40px; padding: 10px 12px; border: 1px solid var(--color-monotone-2); border-radius: 6px; font-size: 14px; transition: all 0.2s ease; background: var(--color-bg); color: var(--color-text);
+  
+  &:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent); }
+  &:disabled { background: var(--color-monotone-1); color: var(--color-monotone-3); cursor: not-allowed; }
+}
+
+/* 모든 select option 스타일 */
+select option,
+.form-select option,
+.form-group select option,
+.form-row select option,
+.form-field select option {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus,
+.form-select option:hover,
+.form-select option:focus,
+.form-group select option:hover,
+.form-group select option:focus,
+.form-row select option:hover,
+.form-row select option:focus,
+.form-field select option:hover,
+.form-field select option:focus {
+  background: var(--color-monotone-1) !important;
+  color: var(--color-text) !important;
+}
+
+select option:checked,
+select option[selected],
+.form-select option:checked,
+.form-select option[selected],
+.form-group select option:checked,
+.form-group select option[selected],
+.form-row select option:checked,
+.form-row select option[selected],
+.form-field select option:checked,
+.form-field select option[selected] {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent) !important;
+  color: var(--color-primary) !important;
+}
+
+.form-input::placeholder, .form-textarea::placeholder { color: var(--color-monotone-3); }
+
+.form-group input,
+.form-group select {
+  width: 100%; height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-monotone-2); border-radius: 8px;
+  background: var(--color-bg); color: var(--color-text);
+  transition: all 0.2s ease;
+  
+  &:focus { outline: none; border-color: var(--color-primary); }
+  &:disabled { background: var(--color-monotone-1); cursor: not-allowed; }
+}
+
+.form-textarea { resize: vertical; min-height: 80px; }
+
+.file-input-container { position: relative; display: inline-block; width: 100%; }
+.form-file-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+.file-input-label {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--color-monotone-2); border-radius: 6px; background: var(--color-bg); cursor: pointer; transition: all 0.2s ease;
+  
+  &:hover { border-color: var(--color-primary); background: var(--color-monotone-1); }
+}
+
+.file-input-icon { font-size: 16px; }
+.file-input-text { font-size: 14px; color: var(--color-monotone-4); }
+
+.form-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--color-monotone-5); }
+.form-checkbox-input { width: 16px; height: 16px; accent-color: var(--color-primary); }
+.form-checkbox-label { user-select: none; }
+
+.form-radio { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--color-monotone-5); }
+.form-radio-input { width: 16px; height: 16px; accent-color: var(--color-primary); }
+.form-radio-label { user-select: none; }
+
+.form-radio-group {
+  display: flex; flex-direction: column; gap: 8px;
+  
+  &.horizontal { flex-direction: row; gap: 16px; }
+}
+
+.form-actions {
+  display: flex; gap: 12px; justify-content: flex-end;
+  
+  &.center { justify-content: center; }
+  &.left { justify-content: flex-start; }
+  &.full { flex-direction: column; }
+}
+
+.form-section {
+  margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--color-monotone-2);
+  
+  &:last-child { border-bottom: none; margin-bottom: 0; }
+}
+
+.form-section-title { font-size: 16px; font-weight: 600; color: var(--color-monotone-5); margin-bottom: 16px; }
+.form-divider { height: 1px; background: var(--color-monotone-2); margin: 24px 0; }
+
+.form-note {
+  padding: 12px 16px; background: var(--color-monotone-1); border-radius: 6px; font-size: 14px; color: var(--color-monotone-4); margin-bottom: 20px;
+  
+  &.warning { background: color-mix(in srgb, var(--color-warning) 10%, transparent); color: var(--color-warning); }
+  &.error { background: color-mix(in srgb, var(--color-failure) 10%, transparent); color: var(--color-failure); }
+  &.success { background: color-mix(in srgb, var(--color-success) 10%, transparent); color: var(--color-success); }
+}
+
+/* Form 반응형 스타일 */
+@media (max-width: 768px) {
+  .form-content { padding: 20px; }
+  .form-header { padding: 20px 20px 16px; }
+  .form-header h3 { font-size: 18px; }
+  .form-row { grid-template-columns: 1fr; }
+  .form-row.triple { grid-template-columns: 1fr; }
+  .form-actions { flex-direction: column; }
+  .form-radio-group.horizontal { flex-direction: column; gap: 8px; }
+}
+
+@media (max-width: 480px) {
+  .form-content { padding: 16px; }
+  .form-header { padding: 16px 16px 12px; }
+  .form-header h3 { font-size: 16px; }
+  .form-field { margin-bottom: 16px; }
+  .form-actions { margin-top: 20px; padding-top: 16px; }
+}
+

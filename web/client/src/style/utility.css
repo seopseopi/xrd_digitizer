@@ -1,0 +1,31 @@
+/*margin*/
+#no-margin {margin: 0 !important;}
+.mg0 {margin: 0 !important;}
+
+.mgt10 {margin-top: 8px !important;}
+.mgt20 {margin-top: 16px !important;}
+
+.mgb10 {margin-bottom: 8px !important;}
+.mgb20 {margin-bottom: 16px !important;}
+
+.mgr5 {margin-right: 5px !important;}
+.mgr10 {margin-right: 8px !important;}
+.mgr20 {margin-right: 16px !important;}
+
+.gap5 {gap: 4px;}
+.gap10 {gap: 8px;}
+.gap20 {gap: 16px;}
+.gap30 {gap: 32px;}
+
+/*padding*/
+.pd0 {padding: 0 !important;}
+.pd10 {padding: 8px !important;}
+.pdlr10 {padding-left: 8px !important; padding-right: 8px !important;}
+.pdlr20 {padding-left: 16px !important; padding-right: 16px !important;}
+
+/*정렬*/
+#group-align-std, .group-align-std {width: 100%; display: flex; justify-content: space-between !important; align-items: center; gap: 8px;}
+.group-align-left {width: 100%; display: flex; justify-content: flex-start !important; align-items: center; gap: 8px;}
+.group-align-center {width: 100%; display: flex; justify-content: center !important; align-items: center; gap: 8px;}
+.group-align-right {width: 100%; display: flex; justify-content: flex-end !important; align-items: center; gap: 8px;}
+

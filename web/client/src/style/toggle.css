@@ -1,0 +1,38 @@
+/*토글*/
+label {
+  width: auto; height: min-content;
+}
+
+label>span {flex: 0 0 auto;}
+label>input {width: 40px; flex: 0 0 auto;}
+
+.toggle {
+  width: 2.5rem; height: 1.5rem;
+  background-color: var(--color-monotone-1);
+  border: none; border-radius: 0.75rem;
+
+  display: flex; align-items: center; flex: 0 0 auto;
+  position: relative;
+  appearance: none;
+}
+
+.toggle::before {
+  content: "";
+  width: 1rem; height: 1rem; transform: scale(0.8); transition: left 250ms linear;
+  background-color: var(--color-bg);
+  border-radius: 50%;
+  position: absolute; left: 0.25rem;
+}
+
+.toggle:checked {background-color: var(--color-primary);}
+.toggle:checked::before {background-color: var(--color-bg); left: 1.25rem;}
+
+.toggle:disabled {border-color: var(--monotone-1); opacity: 0.7; cursor: not-allowed;}
+.toggle:disabled:before {background-color: var(--monotone-2);}
+.toggle:disabled + span {opacity: 0.7; cursor: not-allowed;}
+
+.toggle:focus-visible {background-color: var(--color-monotone-2);}
+
+.toggle:enabled:hover {background-color: var(--color-monotone-2);}
+.toggle:enabled:checked:hover {background-color: var(--color-sub-1);}
+

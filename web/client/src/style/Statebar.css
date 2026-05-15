@@ -1,0 +1,57 @@
+.statebar {
+  width: 100%;
+  flex-shrink: 0;
+  min-height: 36px;
+  margin: 0; padding: 4px;
+  border-bottom: solid 1px var(--color-monotone-2);
+  display: flex; justify-content: flex-start; align-items: center;
+}
+
+.page-info {
+  display: flex; justify-content: flex-start; align-items: center;
+  gap: 8px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-description {
+  font-size: 14px;
+  color: var(--color-monotone-5);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .statebar {
+    padding: 15px 20px;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+  
+  .page-description {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .statebar {
+    padding: 12px 15px;
+  }
+  
+  .page-title {
+    font-size: 20px;
+  }
+  
+  .page-description {
+    font-size: 12px;
+  }
+}

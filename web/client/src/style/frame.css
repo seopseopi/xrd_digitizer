@@ -1,0 +1,91 @@
+/*유동 프레임 설정*/
+#root {width: 100%;}
+.frame-changable {width: 100%; height: 100dvh; display: flex; justify-content: flex-start; align-items: stretch;}
+
+.frame-changable-child {width: 100%; height: 100%;}
+.frame-changable-child:nth-child(1) {width: 300px;}
+.frame-changable-child:nth-child(2) {width: calc(100% - 600px); min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; min-height: 0; overflow: hidden; box-sizing: border-box;}
+.frame-changable-child:nth-child(3) {width: 300px;}
+
+@media screen and (max-width: 1700px) {
+  .frame-changable-child:nth-child(1) {width: 300px;}
+  .frame-changable-child:nth-child(2) {width: calc(100% - 600px); margin: 0;}
+  .frame-changable-child:nth-child(3) {width: 300px;}
+}
+
+@media screen and (max-width: 1400px) {
+  .frame-changable-child:nth-child(1) {width: 300px;}
+  .frame-changable-child:nth-child(2) {width: calc(100% - 300px); margin-left: 0;}
+  .frame-changable-child:nth-child(3) {width: 0;}
+}
+
+@media screen and (max-width: 1280px) {    
+  .frame-changable-child:nth-child(1) {width: 80px !important;}
+  .frame-changable-child:nth-child(2) {width: calc(100% - 80px);}
+}
+
+@media screen and (max-width: 768px) {
+  .frame-changable {flex-direction: column;}
+
+  .frame-changable-child {padding: 0;}
+  .frame-changable-child:nth-child(1),
+  .frame-changable-child:nth-child(2) {width: 100%;}
+  .frame-changable-child:nth-child(2) {flex: 1; min-height: 0;}
+}
+
+.frame-changable-child > span {width: 100%; display: flex; justify-content: center; align-items: flex-start;}
+
+#main-contents-container { 
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 위저드 스테퍼: main-contents 안에서만 100% (뷰포트 전체 폭이 아님), 본문과 동일 좌우 여백 */
+#main-contents-container #data-wizard-stepper-root.data-wizard-stepper-root {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: clamp(20px, 3vw, 32px);
+  padding-right: clamp(20px, 3vw, 32px);
+  border-bottom: solid 1px var(--color-monotone-2);
+  background: var(--color-bg);
+}
+
+#main-contents-container #data-wizard-stepper-root.data-wizard-stepper-root:not(:empty) {
+  min-height: 60px;
+}
+
+#main-contents-container #data-wizard-stepper-root.data-wizard-stepper-root:empty {
+  display: none;
+}
+
+.main-route-outlet {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.page-header {
+  width: 100%; height: auto;
+  margin: 0 0 8px 0; padding: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px;
+}
+
+.page-header > div {flex: 1; gap: 4px;}
+

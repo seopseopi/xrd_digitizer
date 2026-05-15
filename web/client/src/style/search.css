@@ -1,0 +1,34 @@
+/*검색창*/
+.search-bar {
+  width: 100%; height: 40px;
+  margin: 0; padding: 0 16px;
+  background-color: var(--color-monotone-1);
+  border-radius: 8px;
+  display: flex; justify-content: left; align-items: center; flex: 0 1 auto;
+}
+
+.search-bar-container {
+  width: 100%; height: 40px;
+  margin:0; padding: 0;
+  border-radius: 8px;
+  border-radius: 8px;
+  display: flex; justify-content: left; align-items: center; flex: 0 1 auto;
+}
+
+.search-bar-container .btn-sqr {transform: translateX(-35px)}
+
+#search-filter {display: none;}
+
+.search-filter-text {
+  height: 40px;
+  margin: 0; padding: 0 16px;
+  border: none; border-radius: 8px;
+  background-color: var(--color-monotone-1);
+  font-family: 'Pretendard'; font-weight: 400; font-size: 1rem; line-height: 1.0;
+  flex: 1 1 auto;
+}
+
+#search-filter-date p {
+  margin: 0 8px;
+}
+

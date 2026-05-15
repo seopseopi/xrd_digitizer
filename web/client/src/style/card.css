@@ -1,0 +1,100 @@
+/* 카드 */
+.card-row,
+.card-col {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--color-bg);
+  border: solid 1px var(--color-monotone-1); /*box-shadow: 0 1px 2px rgba(0,0,0,0.16);*/
+  display: flex; justify-content: flex-start; align-items: flex-start;
+}
+
+.card-col { flex-direction: column; }
+
+.card-row:hover,
+.card-col:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+/* GraphPlot 등 드롭다운이 있는 카드는 transform 제거 */
+.data-view .left-panel .card-col:hover,
+.graph-plot .left-panel .card-col:hover {
+  transform: none;
+}
+
+.card-add {
+  border: 2px dashed var(--color-monotone-1);
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.card-add .card-content {
+  text-align: center;
+  line-height: 1.2;
+}
+
+.card-add .add-icon .material-symbols-rounded {
+  font-size: 48px;
+  color: var(--color-primary);
+}
+
+/* 폼 카드 (form-card를 card-col로 통합) */
+.form-card {
+  /* card-col 스타일 상속 */
+  width: 100%;
+  padding: 16px;
+  background-color: var(--color-bg);
+  border: solid 1px var(--color-monotone-1);
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+/* 카드 헤더 및 제목 */
+.card-header { 
+  width: 100%;
+  margin-bottom: 12px;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: flex-start;
+}
+
+.card-title { 
+  font-size: 16px; 
+  font-weight: 600;
+  color: var(--color-monotone-5);
+  margin: 0;
+}
+
+.card-date { 
+  font-size: 12px;
+  color: var(--color-monotone-3);
+}
+
+.card-subtitle { 
+  font-size: 13px;
+  color: var(--color-monotone-4);
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+/* 카드 액션 */
+.card-actions {
+  padding: 16px 20px;
+  border-top: 1px solid #f7fafc;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: #f8fafc;
+  margin-top: auto;
+}
+
+@media (max-width: 768px) {
+  .card-actions {
+    flex-direction: column;
+  }
+}
+
