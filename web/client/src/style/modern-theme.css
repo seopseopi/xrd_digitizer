@@ -1024,3 +1024,188 @@ button[style*="rgb(37, 99, 235)"]:not(:has(.xrd-mode-tabs)) {
   max-width: none !important;
   max-height: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Stepper — elegant redesign (replaces the chunky purple arrows)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Container — sleek rounded card */
+#main-contents-container #data-wizard-stepper-root .data-input-stepper {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+  padding: 0 !important;
+}
+
+#main-contents-container #data-wizard-stepper-root.data-wizard-stepper-root {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  min-height: auto !important;
+}
+
+.data-input-stepper-bar {
+  padding: 8px 12px !important;
+  gap: 4px !important;
+  background: transparent !important;
+}
+
+/* Arrow buttons — remove chunky purple, make them subtle round icons */
+.data-wizard-stepper-root .data-input-stepper-bar .btn-sqr.btn-trans,
+.data-input-stepper-bar .btn-sqr {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--color-text-3) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s var(--ease-out) !important;
+  box-shadow: none !important;
+}
+
+.data-input-stepper-bar .btn-sqr:hover:not(:disabled),
+.data-wizard-stepper-root .data-input-stepper-bar .btn-sqr.btn-trans:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: var(--color-primary) !important;
+  border-color: transparent !important;
+  transform: none !important;
+}
+
+.data-input-stepper-bar .btn-sqr:disabled,
+.data-wizard-stepper-root .data-input-stepper-bar .btn-sqr.btn-trans:disabled {
+  opacity: 0.25 !important;
+  background: transparent !important;
+}
+
+.data-input-stepper-arrow-icon {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  color: inherit !important;
+}
+
+/* Track — minimum height, no chunky bg */
+.data-input-stepper-track {
+  min-height: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  position: relative;
+}
+
+/* Add a horizontal progress line BEHIND the steps */
+.data-input-stepper-steps-inner {
+  position: relative !important;
+  overflow: visible !important;
+  padding: 0 24px !important;
+}
+
+.data-input-stepper-steps-inner::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(15, 23, 42, 0.08) 8%,
+    rgba(15, 23, 42, 0.08) 92%,
+    transparent 100%);
+  transform: translateY(-12px);
+  z-index: 0;
+}
+
+/* Step items — better spacing and typography */
+.data-input-stepper-item {
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 4px 8px !important;
+  color: var(--color-text-3) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.data-input-stepper-item:hover {
+  color: var(--color-text-2) !important;
+}
+
+.data-input-stepper-item:hover:not(.is-active):not(:disabled) .data-input-stepper-circle {
+  border-color: var(--color-primary) !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+  transform: scale(1.05);
+}
+
+/* Step circle — elegant pill */
+.data-input-stepper-circle {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 50% !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  background: white !important;
+  color: var(--color-text-3) !important;
+  border: 1.5px solid var(--color-monotone-2) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s var(--ease-out);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Done state — soft indigo */
+.data-input-stepper-item.is-done .data-input-stepper-circle {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: var(--color-primary) !important;
+  border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+.data-input-stepper-item.is-done {
+  color: var(--color-text-2) !important;
+}
+
+/* Active state — gradient + glow ring */
+.data-input-stepper-item.is-active .data-input-stepper-circle {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-3) 100%) !important;
+  color: white !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 0 0 4px rgba(99, 102, 241, 0.12),
+    0 4px 12px rgba(99, 102, 241, 0.3);
+  transform: scale(1.05);
+}
+
+.data-input-stepper-item.is-active {
+  color: var(--color-text) !important;
+  font-weight: 600 !important;
+}
+
+/* Disabled state */
+.data-input-stepper-item.is-disabled,
+.data-input-stepper-item:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.data-input-stepper-item:disabled:hover {
+  color: var(--color-text-3) !important;
+}
+
+.data-input-stepper-item:disabled .data-input-stepper-circle {
+  transform: none !important;
+}
+
+/* Step label */
+.data-input-stepper-label {
+  font-size: 12px !important;
+  font-weight: inherit !important;
+  letter-spacing: -0.01em !important;
+}
