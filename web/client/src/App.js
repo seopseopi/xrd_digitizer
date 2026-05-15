@@ -8,9 +8,9 @@ import './App.css';
 function AppContent() {
   return (
     <ToolbarContentProvider>
-      <div className="frame-changable">
-        {/* 메인 콘텐츠 */}
-        <div className="frame-changable-child" style={{ flex: 1, minWidth: 0 }}>
+      {/* xrd-standalone: 2-col (main + toolbar 300px) */}
+      <div className="frame-changable xrd-standalone">
+        <div className="frame-changable-child xrd-main">
           <div id="main-contents-container">
             <div className="main-route-outlet">
               <Routes>
@@ -21,8 +21,7 @@ function AppContent() {
             </div>
           </div>
         </div>
-        {/* 오른쪽 툴바 (파일 업로드 / 설정 패널) */}
-        <div className="frame-changable-child">
+        <div className="frame-changable-child xrd-toolbar">
           <Toolbar />
         </div>
       </div>

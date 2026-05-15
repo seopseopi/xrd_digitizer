@@ -21,3 +21,20 @@
 @import './style/Statebar.css';
 @import './style/Tabbar.css';
 @import './style/ToolsCollection.css';
+
+/* ── XRD Standalone: 2-column layout (main + toolbar 300px) ── */
+.xrd-standalone { height: 100dvh; }
+.xrd-standalone .xrd-main {
+  width: calc(100% - 300px) !important;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.xrd-standalone .xrd-toolbar {
+  width: 300px !important;
+  flex-shrink: 0;
+}
+@media screen and (max-width: 900px) {
+  .xrd-standalone .xrd-toolbar { width: 0 !important; overflow: hidden; }
+  .xrd-standalone .xrd-main { width: 100% !important; }
+}

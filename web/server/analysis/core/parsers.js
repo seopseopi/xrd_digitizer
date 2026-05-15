@@ -2,7 +2,7 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 
 const CORE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../client/src/analysis/core/parsers.js')
+  path.resolve(__dirname, '../../../client/src/analysis/core/parsers.js')
 ).href;
 
 let _module = null;
