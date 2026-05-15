@@ -274,6 +274,21 @@ y_tgt = np.interp(x_tgt, x_src, y_src) / float(factor)
 | MAE mean | 0.0334 | **0.0323** |
 | Peak markers | apex 절반 높이 | apex 정확히 위치 |
 
+### Phase 14 –18 — from engine to portfolio (AI-paired release)
+
+Phase 1–13까지는 "수치 정확도"를 끌어올리는 엔진 작업이었다.
+이후 단계는 같은 프로젝트를 **다른 사람이 clone해서 그대로 돌아가게** 만드는,
+그리고 채용 담당자가 첫 화면에서 가치를 알아볼 수 있게 만드는 작업이었다.
+Claude(Anthropic) 와 페어 프로그래밍 형태로 진행했다.
+
+| # | 작업 | 발견한 문제 | 처리 방식 |
+|---|---|---|---|
+| 14 | 포스터 자료(v4) 결함 진단 → v5 | Step 5 셀 옆이 빈 칸이라 비대칭 · MAE 차트 가로세로비 어긋남 · `docDefaults`에 한글 폰트 미지정 | docx XML을 직접 unzip → diff → 빈 셀에 "Pipeline Outputs" 박스, `cy` 보정, `eastAsia="Malgun Gothic"` 명시 후 재패키징 |
+| 15 | 시각 자료 일괄 재생성 | Step 1에 calibration 주황점 잔재 · benchmark MAE 차트 텍스트 겹침 · **Step 3에서 sub-pixel "refined" 점이 차트 top에 일자로 깔리는 버그** (y-pixel을 그대로 intensity로 표시) | matplotlib 다크 테마 일관 적용 + 실제 GT(`pattern_11832`)로부터 재생성 · 모든 figure 스크립트화 |
+| 16 | README 재구성 (기술 문서 → 포트폴리오) | 기존 README는 정확하지만 "왜 임팩트가 있는가" 를 30초 안에 못 보여줌 | Hero 배너 · 6개 뱃지 · 5단계 demo grid · Architecture · Engineering Journey · Roadmap · Author 구조 (이 글) |
+| 17 | clone-friendly 클린업 | 57 MB 가중치(`*.pt`)가 git에 따라 올라갈 위험 · `.claude/` 작업 산출물 · `docs/*.docx` 개인 자료 · README 명령어가 가리키는 `examples/sample.png` 부재 | `.gitignore` 강화 (`*.pt`, `ml/weights/`, `docs/*.docx`, `.claude/`) · LICENSE(MIT) · `examples/sample.{png,mi.json}` 동봉으로 reproducibility 확보 |
+| 18 | GitHub 메타데이터 자동 적용 | repo About 비어있어 첫인상이 빈약 · topics 0개 | git credential helper로 토큰 회수 → REST API로 `description` + 15개 topics 일괄 적용 (`xrd · materials-informatics · computer-vision · scikit-learn · opencv · react · nodejs · ...`) |
+
 ### What I learned
 
 - **시각적으로 그럴듯한 결과는 측정 가능한 정확도가 아니다.** 픽셀 시각화와 수치 metric을 분리해서 보지 않으면, 회귀를 놓친다.
