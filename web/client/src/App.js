@@ -8,14 +8,20 @@ import './App.css';
 function AppContent() {
   return (
     <ToolbarContentProvider>
-      {/* xrd-standalone: 2-col (main + toolbar 300px) */}
       <div className="frame-changable xrd-standalone">
         <div className="frame-changable-child xrd-main">
           <div id="main-contents-container">
             <div className="main-route-outlet">
               <Routes>
+                <Route
+                  path="/xrd"
+                  element={
+                    <div className="tools-collection-root box-col pd0 gap10">
+                      <XRDAnalyzer />
+                    </div>
+                  }
+                />
                 <Route path="/" element={<Navigate to="/xrd" replace />} />
-                <Route path="/xrd" element={<XRDAnalyzer />} />
                 <Route path="*" element={<Navigate to="/xrd" replace />} />
               </Routes>
             </div>
