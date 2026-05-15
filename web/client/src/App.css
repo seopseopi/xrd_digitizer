@@ -39,3 +39,6 @@
   .xrd-standalone .xrd-main { width: 100% !important; }
 }
 @import './style/DataManagement.css';
+
+/* === Modern theme (loaded LAST to override legacy) === */
+@import './style/modern-theme.css';

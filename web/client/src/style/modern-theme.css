@@ -1,0 +1,586 @@
+/* ═══════════════════════════════════════════════════════════════
+   Modern Theme — XRD Analyzer
+   Glassmorphism + Violet accent + Pretendard
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
+:root {
+  /* Modern palette override */
+  --color-primary: #6366f1;          /* indigo-500 */
+  --color-primary-2: #4f46e5;        /* indigo-600 */
+  --color-primary-3: #a855f7;        /* purple-500 */
+  --color-accent: #06b6d4;           /* cyan-500 */
+
+  --color-bg: #fafbfc;
+  --color-bg-2: #f3f4f7;
+  --color-bgb: #ffffff;
+  --color-surface: rgba(255, 255, 255, 0.7);
+  --color-surface-solid: #ffffff;
+  --color-glass: rgba(255, 255, 255, 0.65);
+
+  --color-monotone-1: #f8fafc;
+  --color-monotone-2: #e2e8f0;
+  --color-monotone-3: #cbd5e1;
+  --color-monotone-4: #94a3b8;
+
+  --color-text: #0f172a;             /* slate-900 */
+  --color-text-2: #475569;           /* slate-600 */
+  --color-text-3: #94a3b8;           /* slate-400 */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.18);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Global base ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+body {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 40%),
+    var(--color-bg);
+  min-height: 100vh;
+}
+
+/* ── App header bar (top branding) ─────────────────────────────── */
+.xrd-standalone::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.xrd-standalone::after {
+  content: '✦ XRD Analyzer';
+  position: fixed;
+  top: 0;
+  left: 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  z-index: 101;
+  pointer-events: none;
+}
+
+.xrd-standalone { padding-top: 56px; height: 100dvh; }
+
+/* ── Frame layout polish ───────────────────────────────────────── */
+.frame-changable.xrd-standalone .xrd-main {
+  width: calc(100% - 360px) !important;
+  background: transparent;
+  padding: 16px 16px 16px 24px;
+}
+
+.frame-changable.xrd-standalone .xrd-toolbar {
+  width: 360px !important;
+  padding: 16px 16px 16px 0;
+}
+
+@media (max-width: 1100px) {
+  .frame-changable.xrd-standalone .xrd-toolbar { width: 0 !important; padding: 0 !important; }
+  .frame-changable.xrd-standalone .xrd-main { width: 100% !important; }
+}
+
+#main-contents-container {
+  background: var(--color-surface-solid);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.main-route-outlet { padding: 0; }
+
+.tools-collection-root {
+  padding: 0 !important;
+  background: transparent;
+}
+
+/* ── Right Toolbar (glassmorphic card) ─────────────────────────── */
+#toolbar {
+  background: var(--color-glass) !important;
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-lg) !important;
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar-header-strip {
+  padding: 18px 22px 14px !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, transparent 100%);
+}
+
+.toolbar-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  color: var(--color-text-2) !important;
+  margin: 0 !important;
+}
+
+.toolbar-title::before { content: '✧ '; color: var(--color-primary); }
+
+.toolbar-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px !important;
+}
+
+.toolbar-scroll-area::-webkit-scrollbar { width: 6px; }
+.toolbar-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+  border-radius: 3px;
+}
+.toolbar-scroll-area::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.2); }
+
+.toolbar-content { padding: 0; }
+.toolbar-empty-hint {
+  padding: 32px 16px;
+  color: var(--color-text-3);
+  text-align: center;
+  font-size: 13px;
+}
+
+/* ── ProcessingLocationBar (top bar) ───────────────────────────── */
+.processing-location-bar {
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 8px 14px !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.pl-badge {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-3) 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/* ── Buttons (modernize all) ──────────────────────────────────── */
+.btn-primary,
+.btn-rtg.btn-primary,
+.xrd-settings-run-btn {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-2) 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  padding: 11px 18px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  letter-spacing: -0.01em !important;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.btn-primary:hover:not(:disabled),
+.xrd-settings-run-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+}
+
+.btn-primary:active:not(:disabled),
+.xrd-settings-run-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled,
+.xrd-settings-run-btn:disabled {
+  background: var(--color-monotone-2) !important;
+  color: var(--color-text-3) !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-rtg,
+.btn-sqr {
+  border: 1px solid var(--color-monotone-2) !important;
+  border-radius: var(--radius-md) !important;
+  background: white !important;
+  color: var(--color-text) !important;
+  padding: 9px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  transition: all 0.15s var(--ease-out);
+  cursor: pointer;
+}
+
+.btn-rtg:hover:not(:disabled),
+.btn-sqr:hover:not(:disabled) {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: rgba(99, 102, 241, 0.04) !important;
+}
+
+.btn-trans { background: transparent !important; border: 1px solid transparent !important; }
+
+/* ── Accordion sections in settings ────────────────────────────── */
+.xrd-settings-accordion-section {
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s var(--ease-out);
+}
+
+.xrd-settings-accordion-section:hover { box-shadow: var(--shadow-md); }
+
+.xrd-settings-accordion-header {
+  width: 100%;
+  padding: 12px 16px !important;
+  background: transparent !important;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.xrd-settings-accordion-header:hover { background: rgba(99, 102, 241, 0.03) !important; }
+
+.xrd-settings-accordion-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.xrd-settings-accordion-body {
+  padding: 14px 16px !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.05);
+  background: var(--color-monotone-1);
+}
+
+/* ── Input fields ──────────────────────────────────────────────── */
+.xrd-settings-input,
+input[type="text"],
+input[type="number"] {
+  border: 1px solid var(--color-monotone-2) !important;
+  border-radius: 8px !important;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
+  background: white !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: var(--color-text);
+}
+
+.xrd-settings-input:focus,
+input[type="text"]:focus,
+input[type="number"]:focus {
+  outline: none !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* ── Dropzone (file upload) ────────────────────────────────────── */
+.xrd-settings-dropzone {
+  border: 2px dashed var(--color-monotone-3) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 28px 16px !important;
+  text-align: center;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0%, rgba(168, 85, 247, 0.02) 100%) !important;
+  transition: all 0.2s var(--ease-out);
+}
+
+.xrd-settings-dropzone:hover {
+  border-color: var(--color-primary) !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(168, 85, 247, 0.05) 100%) !important;
+}
+
+.xrd-settings-dropzone-icon {
+  color: var(--color-primary) !important;
+  margin-bottom: 8px;
+}
+
+.xrd-settings-dropzone-main {
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  font-size: 14px !important;
+  margin: 0 0 4px !important;
+}
+
+.xrd-settings-dropzone-hint {
+  color: var(--color-text-3) !important;
+  font-size: 12px !important;
+  margin: 0 !important;
+}
+
+/* ── Sample data load button ───────────────────────────────────── */
+.xrd-settings-sample-btn {
+  width: 100%;
+  background: white !important;
+  border: 1px solid var(--color-monotone-2) !important;
+  color: var(--color-text-2) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  margin-top: 8px;
+}
+
+.xrd-settings-sample-btn:hover:not(:disabled) {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: rgba(99, 102, 241, 0.04) !important;
+}
+
+/* ── Mode toggle buttons (파일 분석 / 이미지 디지타이저) ─────── */
+.xrd-mode-tabs button {
+  transition: all 0.2s var(--ease-out) !important;
+}
+
+/* ── Empty state (main area) ───────────────────────────────────── */
+.xrd-empty-state {
+  padding: 60px 32px 48px !important;
+  max-width: 640px !important;
+  margin: 0 auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.xrd-empty-state-hero {
+  width: 88px !important;
+  height: 88px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 20px !important;
+  position: relative;
+}
+
+.xrd-empty-state-hero::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-3));
+  opacity: 0.08;
+  filter: blur(20px);
+  z-index: -1;
+}
+
+.xrd-empty-state-hero-icon {
+  font-size: 40px !important;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-3)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.xrd-empty-state h2,
+.xrd-empty-state-title {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: var(--color-text) !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 0 8px !important;
+}
+
+.xrd-empty-state-description {
+  font-size: 14px !important;
+  color: var(--color-text-2) !important;
+  text-align: center;
+  margin: 0 0 24px !important;
+  line-height: 1.55;
+}
+
+.xrd-empty-state-hint {
+  background: var(--color-monotone-1) !important;
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 12px 16px !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-text-2);
+  margin: 6px 0;
+  transition: all 0.15s;
+}
+
+.xrd-empty-state-hint:hover {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  background: white !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.xrd-empty-state-hint-icon { color: var(--color-primary); font-size: 18px !important; }
+
+/* ── Stepper (1피크 탐색 / 2피크 분석 / etc.) ──────────────── */
+.data-input-stepper {
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  padding: 14px 18px;
+  margin: 0 0 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-input-stepper-circle {
+  background: var(--color-monotone-1) !important;
+  border: 2px solid var(--color-monotone-2) !important;
+  color: var(--color-text-3) !important;
+  transition: all 0.2s var(--ease-out);
+  font-weight: 700 !important;
+}
+
+.data-input-stepper-circle.is-active,
+.data-input-stepper-circle[data-active="true"] {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-2)) !important;
+  border-color: transparent !important;
+  color: white !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.data-input-stepper-label { font-weight: 500 !important; font-size: 12px !important; }
+
+.data-input-stepper-track {
+  background: var(--color-monotone-2) !important;
+  height: 2px !important;
+}
+
+.data-input-stepper-bar {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-3)) !important;
+  height: 2px !important;
+}
+
+/* ── Loading spinner ──────────────────────────────────────────── */
+.processing-indicator,
+.spinner {
+  /* Modern spinner */
+}
+
+.spinner {
+  width: 36px !important;
+  height: 36px !important;
+  border: 3px solid rgba(99, 102, 241, 0.15) !important;
+  border-top-color: var(--color-primary) !important;
+  border-radius: 50% !important;
+  animation: modern-spin 0.7s linear infinite;
+}
+
+@keyframes modern-spin {
+  to { transform: rotate(360deg); }
+}
+
+.processing-indicator p {
+  color: var(--color-text-2) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-top: 12px !important;
+}
+
+/* ── XRD chart container ───────────────────────────────────────── */
+.chart-container {
+  background: white !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  padding: 16px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card-col {
+  background: white !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  box-shadow: var(--shadow-sm) !important;
+  padding: 18px !important;
+}
+
+/* ── Digitizer image canvas area ───────────────────────────────── */
+.xrd-digitizer-canvas,
+canvas[width][height] {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Tab buttons (mode toggle) ─────────────────────────────────── */
+.xrd-mode-toggle {
+  display: flex;
+  background: var(--color-monotone-1);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+/* ── Misc polish ───────────────────────────────────────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.25);
+  color: var(--color-text);
+}
+
+/* Toggle (switch) modernize */
+.toggle, input[type="checkbox"].toggle {
+  accent-color: var(--color-primary);
+}
+
+/* Material icons sizing fix */
+.material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
