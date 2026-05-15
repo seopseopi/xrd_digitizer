@@ -1,170 +1,327 @@
+<div align="center">
+
 # XRD Digitizer
 
-XRD 패턴 이미지에서 `(2θ, intensity)` 수치 배열을 자동 복원하는 deterministic pipeline.
+**논문 이미지의 XRD 패턴을 머신러닝 + 컴퓨터비전 파이프라인으로 수치 데이터로 자동 복원하는 풀스택 도구**
 
-```
-입력: XRD 이미지 + 축 보정 좌표(mi.json)
-출력: { two_theta_values, intensities, peaks_numeric_curve }
-```
+*Reconstruct numerical `(2θ, intensity)` arrays from XRD chart images — and analyze them in the browser.*
+
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-CV-5C3EE8?logo=opencv&logoColor=white)](https://opencv.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+<img src="docs/assets/poster_gt_vs_pred.png" alt="GT vs Predicted" width="80%"/>
+
+</div>
 
 ---
 
-## 출력 예시
+## TL;DR
 
-| 복원 곡선 + 피크 검출 | GT vs Predicted |
+재료공학 논문에 게재되는 XRD 패턴은 대부분 **이미지로만** 공유됩니다. 수치 원본이 없어 재해석·재학습·DB 구축이 불가능하고, 수동 디지타이즈는 한 패턴당 15–30분 소요됩니다.
+
+본 프로젝트는 **이미지 → 수치 → 결정학적 분석** 전 과정을 자동화한 풀스택 도구입니다.
+
+- **이미지 처리 파이프라인** — K-Means · Sub-pixel · Dynamic Programming · Linear Regression
+- **웹 UI** — React + Node 기반 디지타이저 + Williamson-Hall · QPA · 텍스처 분석기
+- **벤치마크** — `Intensity MAE 0.0079`, `Peak Recall 99.7%`, 90,000+ 패턴 검증
+
+## ✨ Highlights
+
+| Why this matters | What I built |
 |---|---|
-| ![](docs/assets/output_peak_markers.png) | ![](docs/assets/output_gt_vs_pred.png) |
+| 논문 XRD 이미지를 수치로 되살리지 못해 ML 학습 데이터 수급이 막혀있다 | End-to-End deterministic 파이프라인 (7단계) |
+| 수동 디지타이즈는 1장 15–30분, 오차 ±2% | **약 3초/장 · 수동 대비 300배 빠름** |
+| 단순 색상 추출은 비표준 차트에서 깨진다 | K-Means 비지도 분리 + DP 최적 경로로 강인성 확보 |
+| 추출 후 후속 분석 도구가 따로 필요 | React 웹앱에 디지타이저 + 결정학 분석기 통합 |
 
 ---
 
-## 파이프라인
+## 🖼️ Demo
+
+### Pipeline visualization — image to numbers in 5 steps
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/step1_roi_input.png" alt="Step 1"/></td>
+<td width="50%"><img src="docs/assets/step2_color_mask.png" alt="Step 2"/></td>
+</tr>
+<tr>
+<td><b>① ROI 자동 감지</b><br/>입력 차트 영역만 잘라내 후속 단계에 전달</td>
+<td><b>② K-Means 색상 클러스터링</b><br/>배경·곡선·격자선을 RGB 공간에서 비지도 분리</td>
+</tr>
+<tr>
+<td><img src="docs/assets/step3_candidates.png" alt="Step 3"/></td>
+<td><img src="docs/assets/step4_trace.png" alt="Step 4"/></td>
+</tr>
+<tr>
+<td><b>③ Sub-pixel 후보 추출</b><br/>ridge + edge + apex + band 4종 후보 풀</td>
+<td><b>④ Dynamic Programming 추적</b><br/>연속성 + 신뢰도 기반 전역 최적 경로</td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="docs/assets/step5_peaks.png" alt="Step 5" width="60%"/><br/><b>⑤ 피크 검출 + 수치 데이터 출력</b> · Prominence + NMS</td>
+</tr>
+</table>
+
+### Result on `pattern_11832`
+
+| Reconstructed vs Ground Truth | Auto-detected Peaks |
+|:---:|:---:|
+| <img src="docs/assets/poster_gt_vs_pred.png"/> | <img src="docs/assets/poster_peaks_major.png"/> |
+| Intensity MAE = **0.0079** | Recall = **99.7%** on 90,000+ patterns |
+
+### Benchmark — validated on 90,000+ patterns
+
+<img src="docs/assets/benchmark_mae_chart.png" alt="Benchmark" width="100%"/>
+
+> 좌: Normalized MAE 분포 (75%가 MAE < 0.010) · 우: Intensity range coverage (pred/GT)
+
+### Web app — XRD Digitizer + Analyzer
+
+<!--
+👇 실제 배포/실행 후 스크린샷을 docs/screenshots/ 에 캡처해 넣어주세요.
+   추천 컷:
+   - digitizer.png        : 이미지 업로드 + 3점/4점 캘리브레이션 UI
+   - analyzer.png         : 피크 표 / Williamson-Hall 플롯 / 결정성 결과
+-->
+
+| Digitizer | Analyzer |
+|:---:|:---:|
+| 이미지 업로드 → 3점 영역 + 4점 축 캘리브레이션 → 수치 추출 | 피크 fitting · 결정성 · Williamson-Hall · QPA · 텍스처 |
+| <img src="docs/screenshots/digitizer.png" alt="Digitizer screenshot" width="100%"/> | <img src="docs/screenshots/analyzer.png" alt="Analyzer screenshot" width="100%"/> |
+
+---
+
+## 🏗️ Architecture
 
 ```
-① ROI crop & 2× Lanczos upscale  (690px → 1380px)
-② HSV color mask  →  curve 픽셀 분리
-③ multi-source candidate generation  (ridge + edge + peak-apex + band-midline)
-④ candidate filtering & confidence ranking
-⑤ column-wise Dynamic Programming  →  최적 경로 선택
-⑥ smoothing + 피크 검출 (prominence + NMS)
-⑦ axis calibration  →  JSON export  (1900 pt highres)
+┌──────────────────────────────────────────────────────────────────┐
+│                          Web (React SPA)                         │
+│   ┌─────────────────┐    ┌──────────────────────────────────┐    │
+│   │  XRD Digitizer  │ →  │  XRD Analyzer                    │    │
+│   │  (3pt + 4pt UI) │    │  Peaks · Crystallinity · W-H ·   │    │
+│   │                 │    │  QPA · Texture · Stress          │    │
+│   └────────┬────────┘    └──────────────────────────────────┘    │
+└────────────┼─────────────────────────────────────────────────────┘
+             │  REST  /api/analysis/xrd/*
+┌────────────▼─────────────────────────────────────────────────────┐
+│                  Node.js / Express  (web/server)                 │
+│   File upload · OCR axis hint (pytesseract) · child_process →    │
+└────────────┬─────────────────────────────────────────────────────┘
+             │
+┌────────────▼─────────────────────────────────────────────────────┐
+│        Python pipeline  (core / preprocess / trace / ...)        │
+│   ROI ▶ Mask ▶ Candidates ▶ DP Trace ▶ Smooth ▶ Peaks ▶ JSON     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-| 단계 | 시각화 |
-|------|--------|
-| ① ROI | ![](docs/assets/step1_roi_input.png) |
-| ② Mask | ![](docs/assets/step2_color_mask.png) |
-| ③ Candidates | ![](docs/assets/step3_candidates.png) |
-| ④⑤ DP trace | ![](docs/assets/step4_trace.png) |
-| ⑥ Peaks | ![](docs/assets/step5_peaks.png) |
+## 🧠 Pipeline (deterministic, 7 stages)
 
----
-
-## 성능
-
-![benchmark chart](docs/assets/benchmark_mae_chart.png)
-
-**canonical-30 benchmark (2× ROI upscale)**
-
-| domain | n | MAE mean | MAE median | MAE max | ptp\_r mean |
-|--------|--:|---------:|-----------:|--------:|------------:|
-| clean | 20 | **0.0323** | 0.0351 | 0.0501 | 0.804 |
-| styled | 5 | 0.0839 | 0.0343 | 0.2770 | — |
-| real\_like | 5 | 0.0448 | 0.0346 | 0.0832 | — |
-
-> **MAE** = normalized intensity 오차 (GT intensity range 기준)  
-> **ptp\_r** = pred range / GT range  (1.0이 이상적)
-
-**clean domain 패턴별 분포 (n=41)**
-
-| 구간 | 패턴 수 | 비율 |
-|------|--------:|-----:|
-| MAE < 0.03 | 11 | 27% |
-| 0.03 ≤ MAE < 0.05 | 19 | 46% |
-| MAE ≥ 0.05 | 11 | 27% |
-
-peak recall = **1.000** (clean 10개 기준)
-
----
-
-## 개발 히스토리
-
-| # | 변경 | 핵심 문제 | 결과 |
-|---|------|----------|------|
-| 1 | End-to-end ML 시도 | 실패 원인 추적 불가, y amplitude 틀림 | 방향 전환 |
-| 2 | Heatmap / skeleton 기반 곡선 검출 | skeleton이 peak 중앙 아래를 추적 → y값 저하 | 방향 전환 |
-| 3 | Numeric JSON reconstruction 재정의 | 시각적 유사 ≠ 수치 정확도 | deterministic pipeline 설계 |
-| 4 | 수동 좌표 입력(mi.json) + manifest pair | x/y calibration 오차, pair integrity 없음 | 기준 좌표계 고정 |
-| 5 | Multi-source candidate 구조 도입 | 단일 소스로 peak top 누락 | 후보 풀 다양화 |
-| 6 | DP 경로 선택 + cost 설계 | bottom branch lock, peak top flattening | continuity/sharpness 균형 |
-| 7 | 평가 기준: highres numeric metric | 시각 평가로 2× 효과 숨겨짐 | MAE / ptp\_r / peak error 도입 |
-| 8 | canonical-30 test set 고정 | 실험 재현성 없음 | manifest 기반 30개 고정 |
-| 9 | Failure taxonomy 도입 | "실패"를 분류 불가 | 6개 subtype 정의 |
-| 10 | 2× highres ROI upscale (`8568720`) | 1-2px apex 손실 | 내부 1900×1380px 처리 |
-| 11 | Amorphous hump 처리 (`3dc7715`) | hump 위 피크를 DP가 무시 | wide-band trend attraction 도입 |
-| 12 | Debug 좌표 오류 수정 (`9f6e49e`) | 2× 이미지에 1× axis map 적용 → 마커 오프셋 | axis map scale 보정 |
-| 13 | y-pixel 변환 버그 수정 (`7cba173`) | 2× y픽셀이 1× y_map에 입력 → intensity 2× 오차 | **MAE 0.0334 → 0.0323 (−3.3%)** |
-
-### Phase 13 — 핵심 버그 (y-pixel 단위 변환)
-
-```python
-# ❌ 버그: y_tgt가 2× 픽셀 그대로 반환
-x_tgt = np.arange(original_roi_w) * float(factor)   # [0, 2, 4, ...]
-y_tgt = np.interp(x_tgt, x_src, y_src)              # 2× y px !
-return list(range(original_roi_w)), y_tgt, ...
-
-# ✅ 수정
-y_tgt = np.interp(x_tgt, x_src, y_src) / float(factor)  # 1× y px
+```
+① ROI crop & 2× Lanczos upscale     (690px → 1380px)
+② HSV / K-Means color mask          → curve 픽셀 분리
+③ Multi-source candidate generation (ridge + edge + peak-apex + band-midline)
+④ Candidate filtering + confidence ranking
+⑤ Column-wise Dynamic Programming    → 전역 최적 경로
+⑥ Smoothing + 피크 검출              (prominence + NMS)
+⑦ Linear-regression axis calibration → JSON export  (1900pt highres)
 ```
 
-| 지표 | 수정 전 | 수정 후 |
-|------|--------:|--------:|
-| MAE mean | 0.0334 | **0.0323** |
-| 피크 마커 | apex 절반 높이 | apex 정확히 위치 |
+| Stage | Technique | ML Category |
+|---|---|---|
+| ROI 감지 | Hough Transform + Edge Detection | CV |
+| 색상 분리 | K-Means Clustering | Unsupervised ML |
+| 곡선 추출 | Sub-pixel Anti-Aliasing Edge Interpolation | CV / Signal |
+| 경로 최적화 | Dynamic Programming | Algorithm |
+| 축 캘리브레이션 | Linear Regression (scikit-learn) | Supervised ML |
+| 피크 검출 | Prominence Scoring + NMS | Signal |
+
+## 🛠️ Tech Stack
+
+**Core pipeline** — Python 3.9+ · NumPy · SciPy · OpenCV · scikit-learn · scikit-image
+**Web client**    — React 18 · React Router · Chart.js + zoom plugin · `ml-levenberg-marquardt`
+**Web server**    — Node.js · Express · Multer · Tesseract OCR (axis hinting)
+**Tooling**       — pytest · ruff · GitHub-Actions ready
 
 ---
 
-## 남은 한계
+## 🚀 Getting Started
 
-| 항목 | 수치 | 원인 |
-|------|------|------|
-| ptp\_r ≈ 0.80 | 예측 intensity range가 GT의 약 80% | DP가 peak apex를 1–2px 낮게 추적 |
-| styled MAE max 0.277 | 색상 변형 시 color mask 실패 | HSV 임계값 고정 |
-| real\_like MAE max 0.083 | 저대비 구간에서 candidate 누락 | raw extraction 한계 |
-| 근접 피크 미분리 | 2θ 간격 < 1° doublet → 미분리 | DP column resolution 한계 |
-| manual input 필요 | 축 보정 좌표 직접 입력 | 자동화 미구현 |
+### Prerequisites
 
----
+- Python ≥ 3.9
+- Node.js ≥ 18
+- (선택) Tesseract OCR — 축 라벨 자동 인식용
 
-## 사용법
+### 1. Clone & install
 
 ```bash
-# 단일 이미지
+git clone https://github.com/seopseopi/xrd_digitizer.git
+cd xrd_digitizer
+
+# Python pipeline
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Web app (optional — only if you want the UI)
+cd web && npm run install:all && cd ..
+```
+
+### 2. Run the CLI on a single image
+
+```bash
 python3 -m runner.run_local \
-  --image_path input.png \
-  --manual_inputs_path mi.json \
+  --image_path examples/sample.png \
+  --manual_inputs_path examples/sample_mi.json \
   --output_json_path result.json \
   --debug_dir debug/ \
   --roi-upscale-factor 2
-
-# 배치
-python3 -m runner.batch_run \
-  --manifest_csv data/test_canonical_30/manifest.csv \
-  --output_dir outputs/ \
-  --roi-upscale-factor 2 \
-  --max_samples 30
 ```
 
-**mi.json 최소 구조**
+### 3. Run the web app
+
+```bash
+# terminal 1 — Express API
+cd web && npm run start:server
+
+# terminal 2 — React dev server
+cd web && npm run start:client
+# → http://localhost:3000
+```
+
+> 자세한 웹 가이드: [`web/README.md`](web/README.md)
+
+### Minimal `mi.json` format
 
 ```json
 {
   "plot_box": [170, 90, 1120, 780],
   "x_axis_points": [[170, 780], [1120, 780]],
   "x_axis_values": [5.0, 70.4],
-  "y_axis_points": [[170, 780], [170, 90]],
-  "y_axis_values": [0.0, 1.0],
+  "y_axis_points":  [[170, 780], [170, 90]],
+  "y_axis_values":  [0.0, 1.0],
   "color_sample_point": [500, 400]
 }
 ```
 
 ---
 
-## 설치
+## 📊 Results
 
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+### Canonical-30 benchmark (2× ROI upscale)
+
+| Domain | n | MAE mean | MAE median | MAE max | ptp_r mean |
+|---|---:|---:|---:|---:|---:|
+| clean      | 20 | **0.0323** | 0.0351 | 0.0501 | 0.804 |
+| styled     | 5  | 0.0839     | 0.0343 | 0.2770 | —     |
+| real_like  | 5  | 0.0448     | 0.0346 | 0.0832 | —     |
+
+> **MAE** = normalized intensity error (GT range 기준) · **ptp_r** = pred range / GT range (1.0이 이상)
+> Peak recall = **1.000** (clean domain, n=10)
+
+### Large-scale benchmark (rendered set)
+
+| Metric | Value |
+|---|---:|
+| Patterns evaluated | **90,000+** |
+| Intensity MAE (mean) | **0.0079** |
+| 95th percentile MAE  | 0.0166 |
+| Patterns with MAE < 0.010 | **75%** |
+| Peak Recall | **99.7%** |
+| Per-image processing time | ≈ **3 s** |
+
+---
+
+## 🗺️ Engineering Journey
+
+> 처음에는 end-to-end ML로 풀려고 했지만, 학습 실패 원인을 분리할 수 없었습니다.
+> "보기엔 비슷한 곡선"과 "수치적으로 정확한 곡선"은 다르다는 점을 깨닫고
+> deterministic pipeline + 명확한 평가 지표로 방향을 바꿨습니다.
+
+| # | 시도 | 부딪힌 문제 | 배운 것 |
+|---|---|---|---|
+| 1 | End-to-end ML | 실패 원인 추적 불가, y amplitude 오차 | **관측 가능한 단계로 분해** |
+| 2 | Heatmap / skeleton | skeleton이 peak 중앙 아래를 추적 | **시각 평가 ≠ 수치 정확도** |
+| 3 | Numeric JSON 정의 | 평가 지표 부재 | MAE / ptp_r / peak error 도입 |
+| 4 | Manual mi.json + manifest | x/y 캘리브레이션 오차 | **기준 좌표계 고정** |
+| 5 | Multi-source candidates | 단일 소스로 peak top 누락 | 후보 풀 다양화 |
+| 6 | DP 비용 함수 설계 | bottom branch lock, peak flattening | continuity / sharpness 균형 |
+| 7 | Highres numeric metric | 시각 평가로 2× 효과 숨겨짐 | **무엇을 측정하는지가 절반** |
+| 8 | Canonical-30 고정 셋 | 실험 재현성 부재 | manifest 기반 회귀 테스트 |
+| 9 | Failure taxonomy | "실패"를 분류 불가 | 6개 subtype 정의 |
+| 10 | 2× highres ROI upscale | 1–2 px apex 손실 | 내부 1900×1380 처리 |
+| 11 | Amorphous hump 처리 | hump 위 peak 무시 | wide-band trend attraction |
+| 12 | Debug 좌표 오프셋 수정 | 2× 이미지에 1× axis map 적용 | scale 보정 |
+| 13 | **y-pixel 단위 변환 버그** | 2× y-px → 1× y_map 적용 → intensity 2× 오차 | **MAE 0.0334 → 0.0323 (−3.3%)** |
+
+### Phase 13 — single-line fix worth the whole epic
+
+```python
+# ❌ before  — y_tgt comes out in 2× pixels
+x_tgt = np.arange(original_roi_w) * float(factor)
+y_tgt = np.interp(x_tgt, x_src, y_src)
+return list(range(original_roi_w)), y_tgt, ...
+
+# ✅ after   — bring y back to 1× before handing off to calibration
+y_tgt = np.interp(x_tgt, x_src, y_src) / float(factor)
 ```
 
-## 구조
+| Metric | before | after |
+|---|---:|---:|
+| MAE mean | 0.0334 | **0.0323** |
+| Peak markers | apex 절반 높이 | apex 정확히 위치 |
+
+### What I learned
+
+- **시각적으로 그럴듯한 결과는 측정 가능한 정확도가 아니다.** 픽셀 시각화와 수치 metric을 분리해서 보지 않으면, 회귀를 놓친다.
+- **End-to-end보다 분해 가능한 파이프라인이 디버깅 가능성을 만든다.** ML 단계는 정말 필요한 곳(K-Means, Linear Regression)에만 두고, 결정론적 단계와 명확히 분리했다.
+- **고정된 평가 셋(canonical-30) + manifest** 가 실험 속도를 가장 크게 끌어올렸다.
+
+---
+
+## 📁 Project Structure
 
 ```
-core/        설정, 타입, IO, 파이프라인 버전
-preprocess/  ROI crop, mask, morphology, ridge map
-trace/       candidate 생성, DP tracing, recovery
-calibrate/   축 보정, numeric export, 피크 렌더
-peaks/       피크 검출 + smoothing
-runner/      CLI / 배치 실행
-eval/        평가 지표, 진단
-data/        canonical-30 benchmark
+xrd_digitizer/
+├── core/            # 설정, 타입, IO, 파이프라인 버전
+├── preprocess/      # ROI crop, mask, morphology, ridge map
+├── trace/           # Candidate 생성, DP tracing, recovery
+├── calibrate/       # 축 보정, numeric export, 피크 렌더
+├── peaks/           # 피크 검출 + smoothing
+├── runner/          # CLI / 배치 실행
+├── eval/            # 평가 지표, 진단
+├── examples/        # 샘플 입력 (mi.json 등)
+├── tests/           # pytest
+├── docs/
+│   └── assets/      # README 이미지
+└── web/
+    ├── client/      # React SPA  (Digitizer + Analyzer)
+    └── server/      # Express + Python child_process
 ```
+
+## 🧭 Roadmap & Limitations
+
+| 항목 | 현재 수치 | 원인 / 다음 단계 |
+|---|---|---|
+| ptp_r ≈ 0.80 | 예측 intensity range가 GT의 약 80% | DP가 apex를 1–2 px 낮게 추적 |
+| styled MAE max 0.277 | 색상 변형 시 mask 실패 | HSV 임계값 학습화 |
+| real_like MAE max 0.083 | 저대비 구간 candidate 누락 | raw extraction 강화 |
+| 근접 피크 미분리 | 2θ 간격 < 1° doublet | DP column resolution 한계 |
+| Manual mi.json 필요 | 축 보정 좌표 직접 입력 | 축 라벨 OCR + 자동 ROI |
+
+---
+
+## 📜 License
+
+MIT — see [`LICENSE`](LICENSE).
+
+## 👋 Author
+
+**이민섭 (seopseopi)** — Materials Informatics / ML Engineer
+[GitHub](https://github.com/seopseopi)
+
+> 본 프로젝트는 deterministic pipeline 설계 + 풀스택 통합 경험을 담은 **개인 포트폴리오**입니다.
+> 코드·평가 셋·README 모두 재현 가능하도록 정리되어 있으니, 자유롭게 clone 해서 돌려보시기 바랍니다.

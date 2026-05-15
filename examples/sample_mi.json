@@ -1,0 +1,52 @@
+{
+  "schema_version": "manual_input_v2",
+  "mi_source": "synthetic_from_gt",
+  "mi_role": "calibration_input",
+  "plot_box": [
+    170,
+    90,
+    1120,
+    780
+  ],
+  "x_axis_points": [
+    [
+      170,
+      780
+    ],
+    [
+      1120,
+      780
+    ]
+  ],
+  "x_axis_values": [
+    5.0,
+    70.41500091552734
+  ],
+  "y_axis_points": [
+    [
+      170,
+      780
+    ],
+    [
+      170,
+      90
+    ]
+  ],
+  "y_axis_values": [
+    3516.0,
+    998928.0
+  ],
+  "color_sample_point": [
+    645,
+    776
+  ],
+  "legend_ignore_boxes": [],
+  "perspective_corners": null,
+  "color_resample_points": [],
+  "sample_id": "pattern_11832",
+  "domain": "clean",
+  "input_image": "data/test_canonical_30/clean/pattern_11832/input.png",
+  "gt_json": "data/test_canonical_30/clean/pattern_11832/gt.json",
+  "source_numeric_json": "data/test_canonical_30/clean/pattern_11832/source_numeric.json",
+  "created_from": "build_test_canonical_30.py@2026-05-08T01:58:20.667219+00:00"
+}

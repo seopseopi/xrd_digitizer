@@ -14,8 +14,13 @@ env/
 
 # Local OS/editor files
 .DS_Store
+**/.DS_Store
 .idea/
 .vscode/
+
+# Claude Code working files (do not publish)
+.claude/
+CLAUDE.md
 
 # Private/local datasets and research artifacts
 /data/
@@ -34,5 +39,16 @@ web/server/.env
 /outputs/
 /debug_artifacts/
 /dist/
+/integration_stub/
 *.zip
 *.tar.gz
+
+# Local docs scratch (binaries / drafts)
+docs/*.docx
+docs/ui_ux_*.md
+
+# ML weights (too heavy for git; use LFS or release artifacts)
+ml/weights/
+*.pt
+*.pth
+*.onnx

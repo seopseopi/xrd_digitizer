@@ -676,7 +676,21 @@ export default function XRDDigitizer({ onDigitizeComplete, mode, setMode, setToo
           <AccordionSection title="이미지 파일" open={openSections.file} onToggle={() => toggleSection('file')}>
             {imageFile ? (
               <>
-                <div style={{ fontSize: 12, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 8 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  padding: '10px 14px', marginBottom: 10,
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  color: '#6366f1', wordBreak: 'break-all', lineHeight: 1.5,
+                }}>
+                  <span style={{
+                    minWidth: 18, height: 18, borderRadius: '50%',
+                    background: 'linear-gradient(135deg,#6366f1,#a855f7)',
+                    color: '#fff', display: 'inline-flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 10, fontWeight: 700,
+                    flexShrink: 0, marginTop: 1,
+                  }}>✓</span>
                   {imageFile.name}
                 </div>
                 <button type="button" className="xrd-settings-sample-btn" style={{ background: '#475569' }}
