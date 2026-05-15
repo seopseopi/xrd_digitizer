@@ -19,7 +19,7 @@ if (!fs.existsSync(TEMP_DIR)) {
 const ALLOWED_EXTENSIONS = new Set([
   '.h5oina', '.ctf',           // EBSD
   '.brml', '.powdll', '.csv', '.xy', '.txt', '.cif', // XRD
-  '.png', '.jpg', '.jpeg', '.tif', '.tiff',            // FFT/SAED 이미지
+  '.png', '.jpg', '.jpeg', '.tif', '.tiff', '.json',            // FFT/SAED 이미지
   '.h5',                                               // EDS
 ]);
 

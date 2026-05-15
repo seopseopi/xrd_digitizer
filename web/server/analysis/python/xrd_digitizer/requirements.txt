@@ -10,3 +10,7 @@ pytest
 
 # Optional: ML-assisted candidate reranking
 # torch
+
+# OCR for axis tick value reading (auto-detect)
+pytesseract     # requires: brew install tesseract
+# easyocr       # optional fallback (heavy ~1GB), uncomment if needed
