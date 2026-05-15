@@ -967,12 +967,12 @@ button:disabled, .btn-rtg:disabled {
   line-height: 1.6;
 }
 
-/* Digitizer canvas wrap polish (when image IS loaded) */
+/* Digitizer canvas wrap — DO NOT add margin/padding here,
+   it breaks canvas/image coordinate alignment for zoom/pan.
+   Only cosmetic background change is safe. */
 div[style*="background: rgb(241, 245, 249)"],
 div[style*="background:#f1f5f9"] {
   background: var(--color-monotone-1) !important;
-  border-radius: var(--radius-lg);
-  margin: 16px;
 }
 
 /* ── More refined section gaps in toolbar ─────────────────────── */
