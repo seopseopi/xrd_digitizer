@@ -274,20 +274,21 @@ y_tgt = np.interp(x_tgt, x_src, y_src) / float(factor)
 | MAE mean | 0.0334 | **0.0323** |
 | Peak markers | apex 절반 높이 | apex 정확히 위치 |
 
-### Phase 14 –18 — from engine to portfolio (AI-paired release)
+### Phase 14 –20 — bringing the engine into the browser
 
-Phase 1–13까지는 "수치 정확도"를 끌어올리는 엔진 작업이었다.
-이후 단계는 같은 프로젝트를 **다른 사람이 clone해서 그대로 돌아가게** 만드는,
-그리고 채용 담당자가 첫 화면에서 가치를 알아볼 수 있게 만드는 작업이었다.
-Claude(Anthropic) 와 페어 프로그래밍 형태로 진행했다.
+Phase 1–13까지는 CLI 파이프라인의 **수치 정확도**를 끌어올리는 엔진 작업이었다.
+이후 단계는 같은 파이프라인을 웹으로 옮기면서 부딪힌, 본질적으로 **"사용자 입력의 오차를 어떻게 흡수할 것인가"** 의 문제였다.
+CLI는 `mi.json`을 사람이 직접 만들었지만, 웹에서는 그 부담을 0에 가깝게 줄이되 — 자동이 틀렸을 때 **사용자가 즉시 미세조정**할 수 있어야 했다.
 
-| # | 작업 | 발견한 문제 | 처리 방식 |
+| # | 단계 | 부딪힌 문제 | 처리 방식 |
 |---|---|---|---|
-| 14 | 포스터 자료(v4) 결함 진단 → v5 | Step 5 셀 옆이 빈 칸이라 비대칭 · MAE 차트 가로세로비 어긋남 · `docDefaults`에 한글 폰트 미지정 | docx XML을 직접 unzip → diff → 빈 셀에 "Pipeline Outputs" 박스, `cy` 보정, `eastAsia="Malgun Gothic"` 명시 후 재패키징 |
-| 15 | 시각 자료 일괄 재생성 | Step 1에 calibration 주황점 잔재 · benchmark MAE 차트 텍스트 겹침 · **Step 3에서 sub-pixel "refined" 점이 차트 top에 일자로 깔리는 버그** (y-pixel을 그대로 intensity로 표시) | matplotlib 다크 테마 일관 적용 + 실제 GT(`pattern_11832`)로부터 재생성 · 모든 figure 스크립트화 |
-| 16 | README 재구성 (기술 문서 → 포트폴리오) | 기존 README는 정확하지만 "왜 임팩트가 있는가" 를 30초 안에 못 보여줌 | Hero 배너 · 6개 뱃지 · 5단계 demo grid · Architecture · Engineering Journey · Roadmap · Author 구조 (이 글) |
-| 17 | clone-friendly 클린업 | 57 MB 가중치(`*.pt`)가 git에 따라 올라갈 위험 · `.claude/` 작업 산출물 · `docs/*.docx` 개인 자료 · README 명령어가 가리키는 `examples/sample.png` 부재 | `.gitignore` 강화 (`*.pt`, `ml/weights/`, `docs/*.docx`, `.claude/`) · LICENSE(MIT) · `examples/sample.{png,mi.json}` 동봉으로 reproducibility 확보 |
-| 18 | GitHub 메타데이터 자동 적용 | repo About 비어있어 첫인상이 빈약 · topics 0개 | git credential helper로 토큰 회수 → REST API로 `description` + 15개 topics 일괄 적용 (`xrd · materials-informatics · computer-vision · scikit-learn · opencv · react · nodejs · ...`) |
+| 14 | **독립 웹앱 분리**<br/>(`f50c264`) | CLI 만으로는 검증 사이클이 느리고 도구를 다른 사람이 못 씀 | React + Express + Python `child_process` 의 풀스택 standalone — 로그인 없이 단독 동작 |
+| 15 | 초기 통합 안정화<br/>(`7663cfa`·`7be5149`·`29e6e8d`·`288449f`) | toolbar 비어있음 · CSS/proxy 충돌 · 캔버스 높이 0 | 분석/디지타이저 컴포넌트 정확한 마운트 지점 확보, dev proxy 정리, layout root wrapper |
+| 16 | **축 좌표 자동 추출**<br/>(`ef8634c`) | 사용자가 ① plot_box (3점) + ② x/y 축 끝점 좌표값(4점) 을 매번 픽셀 단위로 손수 클릭해야 함 | (a) Hough 기반 ROI 자동 감지 + (b) **pytesseract OCR로 축 tick 라벨을 읽어 X1·X2·Y1·Y2의 실제 수치까지 자동 채움**.<br/>한 번의 "🔍 영역 + 축 자동 감지" 클릭으로 7점이 한꺼번에 잡힘 |
+| 17 | **자동값 사용자 보정 UX**<br/>(`XRDDigitizer.js`) | OCR 실패 · 비표준 차트 스타일에서 ±수 px 오차 | 영역 3점(원점·X끝·Y끝) + 캘리브 4점(X1·X2·Y1·Y2)을 **재클릭 가능한 핸들**로 노출. 자동값에서 시작 → 점을 클릭하면 활성 상태가 되고, 캔버스에서 다시 클릭하면 픽셀 단위로 nudge. 인접 tick으로 옮길 수도 있어 차트 끝점이 아니어도 됨 |
+| 18 | **곡선 색상 자동 + 사용자 클릭 선택**<br/>(`color_sample_point`) | 차트마다 곡선 색이 다르고, 동일 톤이 라벨·격자에도 섞여 단순 색 필터로는 깨짐 | ROI 중앙 픽셀에서 후보 색을 자동 추정 → K-Means seed 로 전달. 사용자가 곡선 위 임의 픽셀을 클릭하면 그 RGB를 `color_sample_point`로 교체해 재분리. **자동 + 수동의 양방향 입력** |
+| 19 | 결과 검증 인터랙션<br/>(`631497c`·`2943455`·`7146ef8`) | 디지타이즈 직후 추출이 맞는지 픽셀 단위로 확인 불가 · 휠 줌과 트랙패드 핀치 충돌 | 추출 곡선을 캔버스에 오버레이로 그려 GT 위에 직접 비교. wheel zoom → pan으로 교체, 트랙패드 핀치 명시적 무시 (의도치 않은 줌 차단) |
+| 20 | UI 모던화<br/>(`581b161`·`9091f54`·`40881e3`·`c644493`) | 기능 위주 UI 라 첫 사용자 학습곡선이 가파름 | Pretendard 폰트 + glassmorphism + indigo/violet accent. 단계 스테퍼 재설계, 업로드 파일명 pill 뱃지, accordion 설정 패널 + 슬라이더(피크 높이·간격)로 노출 |
 
 ### What I learned
 
