@@ -1,0 +1,10 @@
+{
+  "name": "xrd-analyzer-web",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm install --prefix client && npm install --prefix server",
+    "start:server": "npm start --prefix server",
+    "start:client": "npm start --prefix client",
+    "setup:python": "cd server/analysis/python/xrd_digitizer && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
+  }
+}

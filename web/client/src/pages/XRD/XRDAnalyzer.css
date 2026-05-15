@@ -1,0 +1,560 @@
+/* XRD 분석기 메인 영역 (분석 설정은 전역 Toolbar 패널에 표시) */
+
+.xrd-analyzer-root.data-management {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* 메인 컬럼 폭에 맞춤: box-col(flex-start) 아래에서도 100%로 제한 */
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.xrd-analyzer-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+/* 데이터 없음: 아이콘 기반 안내 */
+.xrd-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(28px, 5vh, 48px) 20px 32px;
+  margin: 0 auto;
+  max-width: 520px;
+  gap: 12px;
+  color: var(--color-text-2);
+  box-sizing: border-box;
+}
+
+.xrd-empty-state-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 4px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #eff6ff 0%, #e0e7ff 100%);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  box-sizing: border-box;
+}
+
+.xrd-empty-state-hero-icon {
+  font-size: 40px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+  color: var(--color-primary, #2563eb);
+  line-height: 1;
+}
+
+.xrd-empty-state-title {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--color-text-1);
+  letter-spacing: -0.02em;
+}
+
+.xrd-empty-state-lead {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 400px;
+}
+
+.xrd-empty-state-hints {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xrd-empty-state-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0;
+  text-align: left;
+  background: var(--color-sub-2, #f8fafc);
+  border: 1px solid var(--color-monotone-2, #e5e7eb);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.xrd-empty-state-hint-icon {
+  flex-shrink: 0;
+  font-size: 22px;
+  line-height: 1;
+  margin-top: 1px;
+  color: var(--color-primary, #2563eb);
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.xrd-empty-state-hint-text {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text-2);
+}
+
+.xrd-empty-state-hint-text strong {
+  color: var(--color-text-1);
+  font-weight: 600;
+}
+
+.xrd-peak-info-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 외부 래퍼 없이 nav에 병합 — 세로 대칭 패딩 + 플렉스로 스트립 안에서 정중앙 */
+.data-input-stepper.xrd-analyzer-stepper {
+  flex-shrink: 0;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  padding: 10px 4px;
+  border-bottom: 1px solid #e5e7eb;
+  box-sizing: border-box;
+}
+
+.xrd-analyzer-stepper .data-input-stepper-bar {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  min-height: 60px;
+}
+
+.xrd-analyzer-stepper .data-input-stepper-track {
+  min-height: 60px;
+  height: 60px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.xrd-analyzer-stepper .data-input-stepper-steps-inner {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .xrd-analyzer-stepper .data-input-stepper-steps-inner {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 2px;
+  }
+  .xrd-analyzer-stepper .data-input-stepper-item {
+    flex: 0 0 auto;
+    min-width: 64px;
+  }
+}
+
+/* 툴바 스크rollable 영역 안에서 높이 이슈 방지 */
+.toolbar-content .xrd-analysis-settings-panel {
+  height: auto;
+  min-height: 0;
+}
+
+.xrd-analysis-settings-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.xrd-settings-accordion {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+}
+
+.xrd-settings-accordion-section {
+  border-bottom: 1px solid #eeeeee;
+}
+
+.xrd-settings-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.xrd-settings-accordion-header:hover {
+  background: #f8fafc;
+}
+
+.xrd-settings-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.xrd-settings-accordion-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, #2563eb);
+}
+
+.xrd-settings-accordion-chevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.xrd-settings-accordion-body {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xrd-settings-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.xrd-settings-dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 20px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.xrd-settings-dropzone:hover,
+.xrd-settings-dropzone--active {
+  border-color: var(--color-primary, #2563eb);
+  background: #eff6ff;
+}
+
+.xrd-settings-dropzone:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.xrd-settings-dropzone-icon {
+  color: var(--color-primary, #2563eb);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.xrd-settings-dropzone-main {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.xrd-settings-dropzone-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.xrd-settings-dropzone-file {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-primary, #2563eb);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xrd-settings-sample-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.xrd-settings-sample-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.xrd-settings-sample-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.xrd-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xrd-settings-field.xrd-settings-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.xrd-settings-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.xrd-settings-subheading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xrd-settings-select,
+.xrd-settings-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #fff;
+}
+
+.xrd-settings-select:focus,
+.xrd-settings-input:focus {
+  border-color: var(--color-primary, #2563eb);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.xrd-settings-slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.xrd-settings-slider-row:first-of-type {
+  margin-top: 0;
+}
+
+.xrd-settings-slider-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+  font-variant-numeric: tabular-nums;
+}
+
+.xrd-settings-range {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--color-primary, #2563eb);
+  margin-top: -4px;
+}
+
+.xrd-settings-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.xrd-settings-actions {
+  flex-shrink: 0;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eeeeee;
+  background: #fff;
+}
+
+.xrd-settings-run-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.xrd-settings-run-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.xrd-settings-run-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 스테퍼 스크롤 앵커 (Tabbar·스테퍼 높이 고려) */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 1; }
+}
+
+.xrd-progress-anchor-section {
+  scroll-margin-top: 96px;
+}
+
+.xrd-progress-anchor {
+  scroll-margin-top: 96px;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.xrd-dislocation-control-card {
+  padding: 14px 16px;
+}
+
+.xrd-dislocation-control-card p {
+  line-height: 1.45;
+}
+
+.xrd-dislocation-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.xrd-dislocation-results-card {
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.xrd-dislocation-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-monotone-2);
+}
+
+.xrd-dislocation-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.xrd-dislocation-metrics .info-item {
+  min-height: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--color-monotone-2);
+  border-radius: 8px;
+  background: var(--color-sub-2);
+}
+
+.xrd-dislocation-metrics .info-label {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--color-text-2);
+}
+
+.xrd-dislocation-metrics .info-value {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.xrd-dislocation-warning {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  background: var(--color-sub-2);
+  border: 1px solid var(--color-monotone-2);
+  border-radius: 8px;
+  color: var(--color-text-1);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.xrd-dislocation-warning ul {
+  margin: 6px 0 0;
+}
+
+.xrd-dislocation-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+
+.xrd-dislocation-chart-card {
+  padding: 10px 12px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.xrd-dislocation-chart-card h4 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.xrd-dislocation-chart {
+  height: 285px;
+  min-height: 285px;
+}
+
+@media (max-width: 720px) {
+  .xrd-dislocation-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .xrd-dislocation-chart {
+    height: 240px;
+    min-height: 240px;
+  }
+}
+

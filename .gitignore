@@ -24,6 +24,12 @@ env/
 /scripts/
 /tuning/
 
+# Web app
+web/client/node_modules/
+web/client/build/
+web/server/node_modules/
+web/server/.env
+
 # Generated outputs and build artifacts
 /outputs/
 /debug_artifacts/
