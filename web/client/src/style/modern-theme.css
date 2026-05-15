@@ -1010,3 +1010,17 @@ button[style*="rgb(37, 99, 235)"]:not(:has(.xrd-mode-tabs)) {
 }
 
 .data-input-stepper-arrow-icon:hover { color: var(--color-primary) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CRITICAL FIX: digitizer canvas/image must escape global
+   max-width: 100% rule (in init.css + DataManagement.css).
+   Otherwise zoom > 100% caps image at container width while
+   point coordinates use the larger size → misalignment.
+   ═══════════════════════════════════════════════════════════════ */
+.xrd-standalone img,
+.xrd-standalone canvas,
+.data-management img,
+.data-management canvas {
+  max-width: none !important;
+  max-height: none !important;
+}
