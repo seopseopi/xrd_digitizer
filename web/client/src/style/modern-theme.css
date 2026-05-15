@@ -584,3 +584,429 @@ canvas[width][height] {
 
 /* Material icons sizing fix */
 .material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+/* ═══════════════════════════════════════════════════════════════
+   v2 polish — Settings panel sliders, digitizer empty state
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Settings panel section refinements ────────────────────────── */
+.xrd-analysis-settings-panel {
+  gap: 0 !important;
+}
+
+.xrd-settings-accordion-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+  color: var(--color-primary);
+  font-size: 12px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.xrd-settings-accordion-chevron {
+  color: var(--color-text-3);
+  transition: transform 0.2s var(--ease-out);
+}
+
+.xrd-settings-accordion-header[aria-expanded="true"] .xrd-settings-accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+.xrd-settings-accordion-header[aria-expanded="true"] {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, rgba(255, 255, 255, 0) 100%) !important;
+}
+
+/* ── Field labels ─────────────────────────────────────────────── */
+.xrd-settings-label {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--color-text-2) !important;
+  letter-spacing: -0.005em;
+}
+
+.xrd-settings-subheading {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  color: var(--color-text-3) !important;
+  margin: 14px 0 6px !important;
+}
+
+.xrd-settings-field {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xrd-settings-field:last-child { margin-bottom: 0; }
+
+.xrd-settings-divider {
+  border: none !important;
+  height: 1px !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+  margin: 14px 0 !important;
+}
+
+/* ── Slider rows (피크 탐색의 평활화 창, 최소 피크 높이 등) ── */
+.xrd-settings-slider-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 6px;
+}
+
+.xrd-settings-slider-value {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--color-primary) !important;
+  background: rgba(99, 102, 241, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  min-width: 38px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Modern range slider */
+.xrd-settings-range {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 6px !important;
+  background: var(--color-monotone-2) !important;
+  border-radius: 3px !important;
+  outline: none !important;
+  margin: 4px 0 !important;
+  cursor: pointer;
+}
+
+.xrd-settings-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border: 3px solid var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s;
+}
+
+.xrd-settings-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.45);
+}
+
+.xrd-settings-range::-webkit-slider-thumb:active {
+  background: var(--color-primary);
+}
+
+.xrd-settings-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border: 3px solid var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+/* ── Select dropdowns ──────────────────────────────────────────── */
+.xrd-settings-select {
+  width: 100% !important;
+  border: 1px solid var(--color-monotone-2) !important;
+  border-radius: 8px !important;
+  padding: 9px 36px 9px 12px !important;
+  background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E") no-repeat right 10px center !important;
+  background-size: 16px !important;
+  font-size: 13px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: var(--color-text);
+}
+
+.xrd-settings-select:focus {
+  outline: none !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* ── Checkbox field ────────────────────────────────────────────── */
+.xrd-settings-check {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  background: rgba(99, 102, 241, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.xrd-settings-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* ── Actions bar (분석 실행 button area) ──────────────────────── */
+.xrd-settings-actions {
+  padding: 14px 16px !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.06) !important;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+
+.xrd-settings-run-btn {
+  width: 100%;
+  font-size: 14px !important;
+  padding: 12px 16px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Digitizer empty state — make it spacious and inviting
+   ═══════════════════════════════════════════════════════════════ */
+.xrd-settings-dropzone {
+  min-height: 360px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.xrd-settings-dropzone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.xrd-settings-dropzone > * { position: relative; z-index: 1; }
+
+.xrd-settings-dropzone-icon svg {
+  width: 64px !important;
+  height: 64px !important;
+  stroke: url(#grad-violet) !important;
+  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.25));
+}
+
+.xrd-settings-dropzone-main {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 16px 0 6px !important;
+}
+
+.xrd-settings-dropzone-hint {
+  font-size: 13px !important;
+  color: var(--color-text-2) !important;
+  max-width: 320px;
+  line-height: 1.55;
+}
+
+.xrd-settings-dropzone--active {
+  border-color: var(--color-primary) !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.08)) !important;
+  transform: scale(1.005);
+}
+
+/* ── Digitizer canvas/workspace area styling ─────────────────── */
+.xrd-digitizer-canvas-wrap,
+[ref="imgContainerRef"] {
+  border-radius: var(--radius-lg);
+  background: var(--color-monotone-1) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Toggle button bar (파일 분석 / 이미지 디지타이저)
+   ═══════════════════════════════════════════════════════════════ */
+.toolbar-content > div > div:first-child > div {
+  background: var(--color-monotone-1) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  padding: 3px !important;
+  overflow: hidden;
+}
+
+.toolbar-content button[style*="background: rgb(37, 99, 235)"],
+.toolbar-content button[style*="background:#2563eb"] {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-2)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+  font-weight: 600 !important;
+}
+
+/* Animation: subtle fade-in for accordion bodies */
+.xrd-settings-accordion-body {
+  animation: accordion-fade-in 0.25s var(--ease-out);
+}
+
+@keyframes accordion-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Color picker (digitizer) ─────────────────────────────────── */
+input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--color-monotone-2);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+  background: white;
+}
+
+/* ── Smaller-text refinements ──────────────────────────────────── */
+.xrd-settings-accordion {
+  padding-right: 2px !important;
+}
+
+.xrd-settings-file-input,
+input[type="file"] + label {
+  border-radius: 8px;
+}
+
+/* ── Hide scrollbar arrows on number inputs, modernize ────────── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── Empty state for digitizer (when no image): glow ring ────── */
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.05); opacity: 0.6; }
+}
+
+/* ── Better disabled state ────────────────────────────────────── */
+button:disabled, .btn-rtg:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 — Digitizer hero (when no image)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* The digitizer dropzone is rendered with flex:1 + margin:24 in JS.
+   Make it a beautiful full-area hero card. */
+.xrd-settings-dropzone[style*="flex: 1"] {
+  margin: 28px !important;
+  min-height: calc(100% - 56px) !important;
+  border-radius: var(--radius-xl) !important;
+  border: 2px dashed rgba(99, 102, 241, 0.25) !important;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 75% 75%, rgba(168, 85, 247, 0.08) 0%, transparent 45%),
+    linear-gradient(180deg, white 0%, rgba(99, 102, 241, 0.02) 100%) !important;
+  position: relative;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px;
+  transition: all 0.25s var(--ease-out);
+}
+
+.xrd-settings-dropzone[style*="flex: 1"]::after {
+  content: '· · ·';
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-text-3);
+  letter-spacing: 8px;
+  font-size: 14px;
+  opacity: 0.4;
+}
+
+.xrd-settings-dropzone[style*="flex: 1"] .xrd-settings-dropzone-icon svg {
+  width: 84px !important;
+  height: 84px !important;
+  stroke: var(--color-primary) !important;
+  opacity: 0.85;
+  filter: drop-shadow(0 8px 24px rgba(99, 102, 241, 0.25));
+  transition: transform 0.25s var(--ease-out);
+}
+
+.xrd-settings-dropzone[style*="flex: 1"]:hover .xrd-settings-dropzone-icon svg {
+  transform: translateY(-4px) scale(1.05);
+}
+
+.xrd-settings-dropzone[style*="flex: 1"] .xrd-settings-dropzone-main {
+  font-size: 22px !important;
+  margin: 24px 0 8px !important;
+}
+
+.xrd-settings-dropzone[style*="flex: 1"] .xrd-settings-dropzone-hint {
+  font-size: 14px !important;
+  color: var(--color-text-2) !important;
+  text-align: center;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+/* Digitizer canvas wrap polish (when image IS loaded) */
+div[style*="background: rgb(241, 245, 249)"],
+div[style*="background:#f1f5f9"] {
+  background: var(--color-monotone-1) !important;
+  border-radius: var(--radius-lg);
+  margin: 16px;
+}
+
+/* ── More refined section gaps in toolbar ─────────────────────── */
+.toolbar-content .xrd-analysis-settings-panel > div:first-child {
+  padding: 4px 4px 12px !important;
+}
+
+/* Make the mode toggle prettier */
+.toolbar-content > div > div:first-child > div button {
+  font-size: 12px !important;
+  padding: 9px 6px !important;
+  letter-spacing: -0.01em;
+  transition: all 0.2s var(--ease-out) !important;
+}
+
+.toolbar-content > div > div:first-child > div button:not([style*="background: rgb(37, 99, 235)"]):not([style*="background:#2563eb"]):hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  color: var(--color-primary) !important;
+}
+
+/* Auto-detect button (영역 + 축 자동 감지) — make it stand out */
+button[style*="background:#2563eb"]:not([style*="rgb(37, 99, 235)"]),
+button[style*="rgb(37, 99, 235)"]:not(:has(.xrd-mode-tabs)) {
+  /* Already styled by .btn-primary if applicable */
+}
+
+/* ── Make scroll smoother in toolbar ──────────────────────────── */
+.toolbar-scroll-area { scroll-behavior: smooth; }
+
+/* ── Stepper navigation arrows ─────────────────────────────────── */
+.data-input-stepper-arrow-icon {
+  font-size: 18px !important;
+  color: var(--color-text-3) !important;
+  transition: color 0.15s;
+}
+
+.data-input-stepper-arrow-icon:hover { color: var(--color-primary) !important; }
