@@ -378,23 +378,19 @@ export default function XRDDigitizer({ onDigitizeComplete, mode, setMode, setToo
     const container = imgContainerRef.current;
     const img = imgRef.current;
     if (!canvas || !container || !img || !img.naturalWidth) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-    const dr = getDisplayRect();
-    if (!dr) return;
-    const cw = container.clientWidth, ch = container.clientHeight;
-    const nw = img.naturalWidth, nh = img.naturalHeight;
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+
+    // 트랙패드 핀치는 ctrlKey=true 인 wheel 이벤트로 들어옴 → 줌 무시
+    // 휠/스크롤(ctrlKey=false)은 상하좌우 패닝으로 사용
+    if (e.ctrlKey) return;
+
     const z = zoomRef.current;
-    const newLevel = Math.min(8, Math.max(0.5, z.level * factor));
-    const baseScale = Math.min(cw / nw, ch / nh);
-    const newScale = baseScale * newLevel;
-    const imgX = (cx - dr.x) / dr.scale, imgY = (cy - dr.y) / dr.scale;
-    const newX = cx - imgX * newScale, newY = cy - imgY * newScale;
-    zoomRef.current = { level: newLevel, panX: newX - (cw - nw * newScale) / 2, panY: newY - (ch - nh * newScale) / 2 };
-    setZoomDisplay(newLevel);
+    zoomRef.current = {
+      ...z,
+      panX: z.panX - e.deltaX,
+      panY: z.panY - e.deltaY,
+    };
     redraw();
-  }, [getDisplayRect, redraw]);
+  }, [redraw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
